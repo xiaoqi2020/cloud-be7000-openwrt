@@ -9,44 +9,65 @@ boards that request kills the receive side of the UNIPHY0 <-> QCA8084
 all errors, while every UNIPHY, XPCS, SerDes and clock register reads
 the same as on stock. Removing only the l2 node fixes the lane on such
 a board (zerc00l, bisected: clk_ignore_unused alone and s1 >= 875 mV
-alone do not help; iperf3 941 Mbit/s both ways, no lane errors).
+alone do not help; iperf3 941 Mbit/s both ways, no lane errors). The
+USB PHYs get a fixed 1.8 V regulator instead, l2 stays at the level
+the bootloader set.
 
-Qualcomm says the same: l2 is the UNIPHY supply, the PMIC sets it to
-850 mV from OTP and software should not change it (patchwork 14128430,
-"Fix 'l2' regulator min/max voltages", never merged). The USB PHY PLLs
-move to l5 at 1.8 V, as in mainline commit 4f4c905e6a2a ("Fix USB vdd
-info"); l2 is not described, like on stock.
+Qualcomm says l2 is the UNIPHY supply, set to 850 mV by the PMIC from
+OTP, and software should not change it (patchwork 14128430, never
+merged). Mainline 4f4c905e6a2a moves the RDP USB PLLs to l5, but the
+BE7000 RPM has no LDO5: voting it fails with -ENXIO and takes the whole
+mp5496 regulator set down, s1 (CPU) included, and USB never probes
+(tested on zerc00l). Stock describes neither l2 nor l5 and gives the
+USB PHYs no supplies, so a fixed regulator it is.
+
 --- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 +++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
-@@ -307,7 +307,12 @@
+@@ -38,6 +38,15 @@
+ 		bootargs-append = " ubi.block=0,ubi_rootfs root=/dev/ubiblock0_1 cpufreq.default_governor=powersave ubi.mtd=overlay mtdoops.mtddev=crash mtdoops.record_size=65536";
+ 	};
+ 
++	regulator_fixed_1p8: s1800 {
++		compatible = "regulator-fixed";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-name = "fixed_1p8";
++	};
++
+ 	regulator_fixed_3p3: s3300 {
+ 		compatible = "regulator-fixed";
+ 		regulator-min-microvolt = <3300000>;
+@@ -306,13 +315,6 @@
+ 			regulator-min-microvolt = <725000>;
  			regulator-max-microvolt = <1075000>;
  		};
- 
+-
 -		mp5496_l2: l2 {
-+		/* L5 feeds the USB PHY PLLs, as in mainline 4f4c905e6a2a. L2 is
-+		 * the UNIPHY supply: the PMIC sets it to 850 mV from OTP and it
-+		 * must not be voted (1.8 V from the RDP dtsi kills the lane to
-+		 * the QCA8084 on some boards), so it is not described at all,
-+		 * like stock. */
-+		mp5496_l5: l5 {
- 			regulator-min-microvolt = <1800000>;
- 			regulator-max-microvolt = <1800000>;
- 			regulator-always-on;
-@@ -931,7 +936,7 @@
+-			regulator-min-microvolt = <1800000>;
+-			regulator-max-microvolt = <1800000>;
+-			regulator-always-on;
+-			regulator-boot-on;
+-		};
+ 	};
+ };
+ 
+@@ -931,7 +933,7 @@
  };
  
  &usb_0_qmpphy {
 -	vdda-pll-supply = <&mp5496_l2>;
-+	vdda-pll-supply = <&mp5496_l5>;
++	vdda-pll-supply = <&regulator_fixed_1p8>;
  	vdda-phy-supply = <&regulator_fixed_0p925>;
  
  	status = "okay";
-@@ -939,7 +944,7 @@
+@@ -939,7 +941,7 @@
  
  &usb_0_qusbphy {
  	vdd-supply = <&regulator_fixed_0p925>;
 -	vdda-pll-supply = <&mp5496_l2>;
-+	vdda-pll-supply = <&mp5496_l5>;
++	vdda-pll-supply = <&regulator_fixed_1p8>;
  	vdda-phy-dpdm-supply = <&regulator_fixed_3p3>;
  
  	status = "okay";

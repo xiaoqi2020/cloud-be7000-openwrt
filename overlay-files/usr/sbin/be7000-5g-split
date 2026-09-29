@@ -55,7 +55,7 @@ rf_select() {
 write_cal() {
 	local off dev="$(pci_dev)" mtd f t=/tmp/be7000-cal.$$
 	[ "$1" = split ] && off=0x33000 || off=0x65000
-	[ -n "$dev" ] || return 1
+	[ -n "$dev" ] || dev=0002:01:00.0
 	mtd="$(sed -n 's/^\(mtd[0-9]*\):.*"0:art"$/\1/p' /proc/mtd)"
 	[ -n "$mtd" ] || { echo "no ART partition" >&2; return 1; }
 	dd if=/dev/$mtd of=$t bs=4096 skip=$((off / 4096)) count=$((CAL_LEN / 4096)) 2>/dev/null
@@ -231,13 +231,28 @@ case "$1" in
 		echo "5 GHz split off: one radio for the whole band"
 		;;
 	boot)
-		if [ "$(uci -q get be7000.wifi.split_5g)" = 1 ]; then
-			apply_fw $SPLIT_ID && [ "$(radios)" -ge 2 ] || {
+		if [ "$(uci -q get be7000.wifi.split_5g)" = 1 ]; then mode=split; id=$SPLIT_ID; else mode=single; id=0; fi
+		if [ -e "$PARAM" ]; then
+			# ath12k is already in: switch it by a rebind
+			apply_fw $id || exit 0
+		else
+			# the normal case, S09 before kmodloader: RF lines, calibration
+			# and the board_id option, ath12k then loads in the right mode
+			prepare $mode || logger -t be7000-5g-split "could not prepare $mode mode"
+		fi
+		[ $mode = split ] || exit 0
+		# once the phy is there, check that the dual-MAC firmware gave two
+		# radios; if not, go back to one radio so 5 GHz keeps working
+		(
+			i=0
+			while [ $i -lt 90 ] && [ "$(radios)" -eq 0 ]; do sleep 1; i=$((i+1)); done
+			if [ "$(radios)" -lt 2 ]; then
 				logger -t be7000-5g-split "dual-MAC firmware did not start, 5 GHz back to one radio"
 				config_off
 				apply_fw 0
-			}
-		fi
+				wifi reload
+			fi
+		) </dev/null >/dev/null 2>&1 &
 		exit 0
 		;;
 	*)
