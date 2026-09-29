@@ -35,7 +35,7 @@ My own board: RC06, IPQ9554 rev 1.1, stock firmware 1.1.38, 1 GB of RAM.
 ## Known issues
 
 - **Ethernet on some boards before 1.3.0.** The ports brought up a link, but the router did not receive a single frame. The cause was the kernel's RPM request for the l2 regulator, fixed in 1.3.0, details in [patches.en.md](docs/patches.en.md#ethernet-reception-on-some-boards). If the cable still does not work on your board, write in [issue #1](https://github.com/timofey-maykov/be7000-openwrt/issues/1) or in the 4PDA thread, you can get in over Wi-Fi (network OpenWrt-BE7000, password be7000openwrt).
-- 5 GHz is one radio for the whole band by default. It can be split into two independent ones, like 5G-1 and 5G-2 on stock (36-64 and 149-165), on the Network, 5 GHz: two radios page or with be7000-5g-split on, details in [patches.en.md](docs/patches.en.md#5-ghz-two-radios).
+- 5 GHz is one radio for the whole band by default. It can be split into two independent ones, like 5G-1 and 5G-2 on stock (36-64 and 149-165), in the 5 GHz mode block at the top of Network, Wireless or with be7000-5g-split on, details in [patches.en.md](docs/patches.en.md#5-ghz-two-radios).
 - There is 19.4 MB of space for /overlay; for anything large it is better to move it to USB with the be7000-extroot command.
 - The kernel uses the mainline qcom-ppe rather than the vendor NSS, so acceleration is only at the PPE level.
 - The port lags behind OpenWrt main, updating the base may require reworking the patches.

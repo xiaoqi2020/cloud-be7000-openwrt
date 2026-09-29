@@ -51,5 +51,9 @@ On stock the QCN9274 5 GHz module can run as two independent radios (5G-1 and 5G
 | 309 | with fixed radio memory, hand the firmware every segment it asked for: dual-MAC asks for six, including MLO global memory, and never answers a reply with fewer |
 | 310 | ath12k board_id module parameter: overrides the DTS board id, with bit 0x1000 it lifts the DTS radio count cap |
 
-The mode is switched by be7000-5g-split (on, off, status) or the Network, 5 GHz: two radios page. The script sets the parameter, rebinds the module on the PCI bus without rebooting the router and adds a second 5 GHz radio to the Wi-Fi config with copies of the first one's networks. The choice is kept in /etc/config/be7000 and restored at boot. The board data for dual-MAC is the stock one (bdwlan.b1008), shipped as board.bin.
+The mode is switched by be7000-5g-split (on, off, status) or the 5 GHz mode block at the top of Network, Wireless. The script sets the parameter, rebinds the module on the PCI bus without rebooting the router and adds a second 5 GHz radio to the Wi-Fi config with copies of the first one's networks. The choice is kept in /etc/config/be7000. At boot an init script at S09, before ath12k loads, prepares the mode and the module starts in it right away. The board data for dual-MAC is the stock one (bdwlan.b1008), shipped as board.bin.
+
+Like stock (set_5g_split), in the two-radio mode the script flips the RF lines: TLMM6 to 1 and TLMM7 to 0, the other way round for one radio. The DTS sets these lines with a pinctrl state instead of gpio-hogs, otherwise they could not be changed at runtime (tree 007). Stock has its own calibration for two radios, at ART offset 0x33000, for one radio 0x65000. The script puts the right one into the file ath12k asks for.
+
+With two radios iwinfo gives each radio only its own channels (tree 008), before that LuCI offered the lower radio the upper one's channels and the AP did not start.
 
