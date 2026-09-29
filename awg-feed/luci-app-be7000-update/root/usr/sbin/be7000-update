@@ -59,6 +59,12 @@ newer() {
 	[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]
 }
 
+# messages that reach LuCI follow its language (luci.main.lang)
+EN=0
+case "$(uci -q get luci.main.lang)" in en*) EN=1 ;; esac
+# t <russian> <english>
+t() { [ "$EN" = 1 ] && echo "$2" || echo "$1"; }
+
 fail() {
 	if [ "$JSON" = 1 ]; then
 		printf '{"ok":false,"error":"%s"}\n' "$(json_escape "$1")"
@@ -84,10 +90,10 @@ fetch() {
 do_check() {
 	local tmp=/tmp/be7000-release-latest.json
 	: >"$LOG"
-	fetch "$API" "$tmp" || fail "GitHub не отвечает или нет https (нужны ca-bundle и libustream, они есть с 1.2.5)"
+	fetch "$API" "$tmp" || fail "$(t "GitHub не отвечает или нет https (нужны ca-bundle и libustream, они есть с 1.2.5)" "GitHub does not answer or there is no https (needs ca-bundle and libustream, present since 1.2.5)")"
 	local tag name date body img_url sums_url
 	tag=$(jsonfilter -i "$tmp" -e '@.tag_name' 2>/dev/null)
-	[ -n "$tag" ] || fail "не удалось разобрать ответ GitHub"
+	[ -n "$tag" ] || fail "$(t "не удалось разобрать ответ GitHub" "could not parse the GitHub answer")"
 	name=$(jsonfilter -i "$tmp" -e '@.name')
 	date=$(jsonfilter -i "$tmp" -e '@.published_at')
 	body=$(jsonfilter -i "$tmp" -e '@.body')
@@ -109,18 +115,18 @@ do_download() {
 	local url sums
 	url=$(jsonfilter -i "$STATE" -e '@.image_url')
 	sums=$(jsonfilter -i "$STATE" -e '@.sums_url')
-	[ -n "$url" ] && [ -n "$sums" ] || fail "в релизе нет sysupgrade.bin или sha256sums.txt"
+	[ -n "$url" ] && [ -n "$sums" ] || fail "$(t "в релизе нет sysupgrade.bin или sha256sums.txt" "the release has no sysupgrade.bin or sha256sums.txt")"
 	mkdir -p "$DIR"
 	# /tmp is RAM; make sure the image fits with room to spare for sysupgrade
 	local free
 	free=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
-	[ "${free:-0}" -gt 120 ] || fail "мало свободной памяти для загрузки образа: ${free} МБ"
-	fetch "$sums" "$SUMS" || fail "не удалось скачать sha256sums.txt"
-	fetch "$url" "$IMG" || { rm -f "$IMG"; fail "не удалось скачать образ"; }
+	[ "${free:-0}" -gt 120 ] || fail "$(t "мало свободной памяти для загрузки образа: ${free} МБ" "not enough free memory to download the image: ${free} MB")"
+	fetch "$sums" "$SUMS" || fail "$(t "не удалось скачать sha256sums.txt" "could not download sha256sums.txt")"
+	fetch "$url" "$IMG" || { rm -f "$IMG"; fail "$(t "не удалось скачать образ" "could not download the image")"; }
 	local want got
 	want=$(grep -- '-squashfs-sysupgrade\.bin' "$SUMS" | awk '{print $1}')
 	got=$(sha256sum "$IMG" | awk '{print $1}')
-	[ -n "$want" ] && [ "$want" = "$got" ] || { rm -f "$IMG"; fail "контрольная сумма не совпала"; }
+	[ -n "$want" ] && [ "$want" = "$got" ] || { rm -f "$IMG"; fail "$(t "контрольная сумма не совпала" "checksum mismatch")"; }
 	echo "$got" >"$DIR/verified"
 }
 
@@ -186,7 +192,7 @@ apply)
 	[ -s "$STATE" ] || do_check
 	avail=$(jsonfilter -i "$STATE" -e '@.available')
 	if [ "$avail" != 1 ] && [ "$avail" != true ] && [ "$YES" != 1 ]; then
-		fail "новой версии нет, а принудительно только с --yes"
+		fail "$(t "новой версии нет, а принудительно только с --yes" "no newer version, forcing needs --yes")"
 	fi
 	downloaded_ok || do_download
 	if [ "$YES" != 1 ]; then

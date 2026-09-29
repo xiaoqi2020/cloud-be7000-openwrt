@@ -22,7 +22,7 @@ function fmtDate(iso) {
 function mb(bytes) {
 	if (!bytes)
 		return '';
-	return (bytes / 1048576).toFixed(1) + ' МБ';
+	return _('%.1f МБ').format(bytes / 1048576);
 }
 
 return view.extend({
@@ -46,7 +46,7 @@ return view.extend({
 		btn.disabled = true;
 		return callCheck().then(function(res) {
 			if (res && res.ok === false)
-				ui.addNotification(null, E('p', res.error || 'не удалось проверить'), 'error');
+				ui.addNotification(null, E('p', res.error || _('не удалось проверить')), 'error');
 			return self.refresh();
 		}).finally(function() { btn.disabled = false; });
 	},
@@ -55,18 +55,18 @@ return view.extend({
 		var self = this;
 		var latest = st.latest || {};
 		var cur = (st.installed || {}).version || 'dev';
-		if (!confirm('Поставить ' + latest.latest + ' поверх ' + cur + '? Настройки сохранятся, роутер перезагрузится, связь пропадёт на пару минут.'))
+		if (!confirm(_('Поставить %s поверх %s? Настройки сохранятся, роутер перезагрузится, связь пропадёт на пару минут.').format(latest.latest, cur)))
 			return;
 		var btn = ev.target;
 		btn.disabled = true;
-		ui.showModal('Обновление', [
-			E('p', { 'class': 'spinning' }, 'Скачиваю образ и проверяю сумму. Не выключайте роутер.'),
+		ui.showModal(_('Обновление'), [
+			E('p', { 'class': 'spinning' }, _('Скачиваю образ и проверяю сумму. Не выключайте роутер.')),
 			E('pre', { 'id': 'be7000-update-log', 'style': 'max-height:14em;overflow:auto' }, '')
 		]);
 		return callDownload().then(function(res) {
 			if (!res || res.ok === false) {
 				ui.hideModal();
-				ui.addNotification(null, E('p', (res && res.error) || 'не удалось скачать образ'), 'error');
+				ui.addNotification(null, E('p', (res && res.error) || _('не удалось скачать образ')), 'error');
 				btn.disabled = false;
 				return;
 			}
@@ -80,8 +80,8 @@ return view.extend({
 							logEl.textContent = l.log;
 					}).catch(function() {
 						// the router is rebooting into the new image
-						ui.showModal('Обновление', [
-							E('p', { 'class': 'spinning' }, 'Роутер перезагружается в новую версию. Страница обновится сама.')
+						ui.showModal(_('Обновление'), [
+							E('p', { 'class': 'spinning' }, _('Роутер перезагружается в новую версию. Страница обновится сама.'))
 						]);
 						if (tries > 6)
 							window.setTimeout(function() { window.location.reload(); }, 60000);
@@ -100,39 +100,39 @@ return view.extend({
 
 		var rows = [
 			E('tr', { 'class': 'tr' }, [
-				E('td', { 'class': 'td left', 'width': '33%' }, 'Установлено'),
-				E('td', { 'class': 'td left' }, (inst.version || 'dev') + (inst.tag ? ' (' + inst.tag + ')' : '') + (inst.date ? ', собрано ' + fmtDate(inst.date) : ''))
+				E('td', { 'class': 'td left', 'width': '33%' }, _('Установлено')),
+				E('td', { 'class': 'td left' }, (inst.version || 'dev') + (inst.tag ? ' (' + inst.tag + ')' : '') + (inst.date ? ', ' + _('собрано %s').format(fmtDate(inst.date)) : ''))
 			]),
 			E('tr', { 'class': 'tr' }, [
-				E('td', { 'class': 'td left' }, 'Последняя на GitHub'),
-				E('td', { 'class': 'td left' }, latest ? (latest.latest + (latest.published_at ? ', ' + fmtDate(latest.published_at) : '') + (latest.image_size ? ', образ ' + mb(latest.image_size) : '')) : 'ещё не проверяли')
+				E('td', { 'class': 'td left' }, _('Последняя на GitHub')),
+				E('td', { 'class': 'td left' }, latest ? (latest.latest + (latest.published_at ? ', ' + fmtDate(latest.published_at) : '') + (latest.image_size ? ', ' + _('образ %s').format(mb(latest.image_size)) : '')) : _('ещё не проверяли'))
 			])
 		];
 
 		var status;
 		if (!latest)
-			status = E('p', {}, 'Нажмите «Проверить», страница спросит GitHub, есть ли версия новее.');
+			status = E('p', {}, _('Нажмите "Проверить", страница спросит GitHub, есть ли версия новее.'));
 		else if (avail)
-			status = E('p', { 'style': 'color:#c60' }, 'Есть обновление. Ставится обычным sysupgrade с сохранением настроек, образ проверяется по контрольной сумме из релиза.');
+			status = E('p', { 'style': 'color:#c60' }, _('Есть обновление. Ставится обычным sysupgrade с сохранением настроек, образ проверяется по контрольной сумме из релиза.'));
 		else
-			status = E('p', {}, 'Стоит последняя версия.');
+			status = E('p', {}, _('Стоит последняя версия.'));
 
 		var buttons = [
-			E('button', { 'class': 'btn', 'click': ui.createHandlerFn(self, 'check') }, 'Проверить')
+			E('button', { 'class': 'btn', 'click': ui.createHandlerFn(self, 'check') }, _('Проверить'))
 		];
 		if (avail)
-			buttons.push(E('button', { 'class': 'btn cbi-button-action important', 'style': 'margin-left:.5em', 'click': function(ev) { return self.apply(ev, st); } }, 'Скачать и установить ' + latest.latest));
+			buttons.push(E('button', { 'class': 'btn cbi-button-action important', 'style': 'margin-left:.5em', 'click': function(ev) { return self.apply(ev, st); } }, _('Скачать и установить %s').format(latest.latest)));
 
 		var notes = null;
 		if (latest && latest.body)
 			notes = E('div', { 'class': 'cbi-section' }, [
-				E('h3', {}, 'Что в ' + latest.latest),
+				E('h3', {}, _('Что в %s').format(latest.latest)),
 				E('pre', { 'style': 'white-space:pre-wrap;font-family:inherit' }, latest.body)
 			]);
 
 		return E('div', { 'id': 'be7000-update' }, [
-			E('h2', {}, 'Обновление сборки'),
-			E('div', { 'class': 'cbi-map-descr' }, 'Проверка новых версий этой сборки на GitHub и установка без ручной загрузки файлов. Модули ядра и пакеты фида после обновления подхватываются под новое ядро сами.'),
+			E('h2', {}, _('Обновление сборки')),
+			E('div', { 'class': 'cbi-map-descr' }, _('Проверка новых версий этой сборки на GitHub и установка без ручной загрузки файлов. Модули ядра и пакеты фида после обновления подхватываются под новое ядро сами.')),
 			E('div', { 'class': 'cbi-section' }, [
 				E('table', { 'class': 'table' }, rows),
 				status,

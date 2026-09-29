@@ -30,15 +30,15 @@ function waitJob() {
 function mb(kb) {
 	if (!kb)
 		return '—';
-	return (kb / 1024).toFixed(1) + ' МБ';
+	return _('%.1f МБ').format(kb / 1024);
 }
 
 function gb(sizeMb) {
 	if (!sizeMb)
 		return '—';
 	if (sizeMb >= 1024)
-		return (sizeMb / 1024).toFixed(1) + ' ГБ';
-	return sizeMb + ' МБ';
+		return _('%.1f ГБ').format(sizeMb / 1024);
+	return _('%d МБ').format(sizeMb);
 }
 
 return view.extend({
