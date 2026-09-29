@@ -3194,6 +3194,42 @@ body[data-page="admin-status-overview"] .cbi-section .table .td:first-child { co
 	.td .ifacebox .ifacebox-body { display: flex; align-items: center; }
 }
 
+/* Network, Wireless: radio rows and their network rows in even columns.
+ * A radio row has span.ifacebadge in the first cell, a network row has
+ * div.ifacebadge. Badges get one width, buttons one grid, network rows
+ * are marked with a tinted background and a bar on the left. */
+@media (min-width: 769px) {
+	#cbi-wireless-wifi-device .td[data-name="_badge"] { width: 164px; }
+	#cbi-wireless-wifi-device .td[data-name="_badge"] > .center { text-align: left; }
+	#cbi-wireless-wifi-device .td[data-name="_badge"] .ifacebadge {
+		width: 146px;
+		box-sizing: border-box;
+		justify-content: flex-start;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	#cbi-wireless-wifi-device .td[data-name="_stat"] { width: auto; }
+	#cbi-wireless-wifi-device .td.cbi-section-actions { width: 1%; }
+	#cbi-wireless-wifi-device .td.cbi-section-actions > div {
+		display: grid;
+		grid-template-columns: repeat(3, 112px);
+		justify-content: end;
+		gap: 6px;
+	}
+	#cbi-wireless-wifi-device .td.cbi-section-actions .cbi-button {
+		width: 100%;
+		padding: 0 8px;
+		justify-content: center;
+		text-align: center;
+	}
+	#cbi-wireless-wifi-device .tr:has(> .td[data-name="_badge"] div.ifacebadge) > .td[data-name="_badge"] { box-shadow: inset 3px 0 0 var(--nb-accent-ring, rgba(79,70,229,.3)); }
+	#cbi-wireless-wifi-device .tr:has(> .td[data-name="_badge"] div.ifacebadge) > .td { background: var(--nb-surface-2); }
+	#cbi-wireless-wifi-device .tr:has(> .td[data-name="_badge"] span.ifacebadge) > .td { border-top: 1px solid var(--nb-border-strong, var(--nb-border)); padding-top: 14px; padding-bottom: 10px; }
+	#cbi-wireless-wifi-device .tr:first-child > .td { border-top: 0; }
+	#cbi-wireless-wifi-device .td[data-name="_stat"] big { font-size: 15px; }
+}
+
 @media print {
 	.nb-sidebar, .nb-topbar, .nb-footer, .cbi-page-actions { display: none !important; }
 	body { background: #fff; }

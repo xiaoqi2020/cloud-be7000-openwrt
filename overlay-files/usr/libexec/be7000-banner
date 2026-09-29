@@ -1,22 +1,28 @@
 #!/usr/bin/ucode
-// Builds /etc/banner: the stock OpenWrt banner from /rom plus the credits
-// from the same JSON the LuCI page (System, Credits) shows. English when
-// LuCI is set to English (luci.main.lang), Russian otherwise.
+// Builds /etc/banner: the Beam WRT logo from /rom/etc/banner, the version
+// line and the credits from the same JSON the LuCI page (System, Credits)
+// shows. English when LuCI is set to English (luci.main.lang), Russian
+// otherwise.
 
 import { readfile, writefile, popen } from 'fs';
 
 const src = readfile('/rom/etc/banner') ?? '';
 const data = json(readfile('/www/luci-static/resources/be7000-credits/credits.json') ?? '{}');
-const ver = match(readfile('/etc/be7000-release') ?? '', /VERSION=([^\n]+)/)?.[1];
+const rel = readfile('/etc/openwrt_release') ?? '';
+const ver = match(readfile('/etc/be7000-release') ?? '', /VERSION=([^\n]+)/)?.[1] ??
+	replace(match(rel, /DISTRIB_RELEASE='([^']*)'/)?.[1] ?? '', /^(BE7000|Beam WRT) /, '');
+const rev = match(rel, /DISTRIB_REVISION='([^']*)'/)?.[1];
 const p = popen('uci -q get luci.main.lang');
 const lang = match(trim(p?.read('all') ?? ''), /^en/) ? 'en' : 'ru';
 p?.close();
 
 const T = {
-	ru: { hello: 'Спасибо всем, без кого этой сборки бы не было',
+	ru: { model: 'для Xiaomi BE7000', base: 'на базе OpenWrt',
+	      hello: 'Спасибо всем, без кого этой сборки бы не было',
 	      star: 'на его плате нашлась причина мёртвого Ethernet',
 	      links: 'Ссылки на всех в LuCI, Система, Благодарности' },
-	en: { hello: 'Thanks to everyone this build would not exist without',
+	en: { model: 'for the Xiaomi BE7000', base: 'based on OpenWrt',
+	      hello: 'Thanks to everyone this build would not exist without',
 	      star: 'the cause of the dead Ethernet was found on his board',
 	      links: 'Links to everyone in LuCI, System, Credits' }
 }[lang];
@@ -25,7 +31,10 @@ let out = src;
 if (length(out) && !match(out, /\n$/))
 	out += '\n';
 
-out += `\n be7000-openwrt${ver ? ' ' + ver : ''}\n\n ${T.hello}\n`;
+out += ` -----------------------------------------------------\n`;
+out += ` Beam WRT${ver ? ' ' + ver : ''} ${T.model}\n ${T.base}${rev ? ' ' + rev : ''}\n`;
+out += ` -----------------------------------------------------\n`;
+out += `\n ${T.hello}\n`;
 
 for (let g in data.groups ?? []) {
 	out += `\n  ${g.title[lang] ?? g.title.ru}\n`;

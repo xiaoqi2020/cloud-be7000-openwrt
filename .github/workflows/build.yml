@@ -92,6 +92,8 @@ jobs:
         run: |
           cd owrt
           cp ../repo/patches/*.patch target/linux/qualcommbe/patches-6.18/
+          # ath12k lives in the mac80211 package, not in the kernel tree
+          cp ../repo/patches/mac80211-ath12k/*.patch package/kernel/mac80211/patches/ath12k/
           for p in ../repo/patches/tree/*.patch; do
             patch -p1 < "$p"
           done
@@ -152,7 +154,35 @@ jobs:
           case "${{ github.ref_name }}:${{ inputs.warm }}" in
             debug-*|*:true) echo "CONFIG_PACKAGE_tcpdump-mini=y" >> .config ;;
           esac
+          # the version LuCI, /etc/openwrt_release and the banner show:
+          # "Beam WRT 1.3.1 r20260623-790d036a" instead of "OpenWrt SNAPSHOT".
+          # Image file names stay openwrt-... (tree 009), the installer and
+          # be7000-update look the assets up by name.
+          TAG="${{ github.ref_name }}"
+          case "$TAG" in
+            v*) REL="${TAG#v}" ;;
+            debug-*) REL="$TAG" ;;
+            *) REL="" ;;
+          esac
+          if [ -n "$REL" ]; then
+            {
+              echo "CONFIG_IMAGEOPT=y"
+              echo "CONFIG_VERSIONOPT=y"
+              echo "CONFIG_VERSION_DIST=\"Beam WRT\""
+              echo "CONFIG_VERSION_NUMBER=\"$REL\""
+              echo "CONFIG_VERSION_CODE=\"$VERSION_STRING\""
+              echo "CONFIG_VERSION_MANUFACTURER=\"Beam WRT\""
+              echo "CONFIG_VERSION_MANUFACTURER_URL=\"https://github.com/timofey-maykov/be7000-openwrt\""
+              echo "CONFIG_VERSION_HOME_URL=\"https://github.com/timofey-maykov/be7000-openwrt\""
+              echo "CONFIG_VERSION_BUG_URL=\"https://github.com/timofey-maykov/be7000-openwrt/issues\""
+              echo "CONFIG_VERSION_SUPPORT_URL=\"https://4pda.to/forum/index.php?showtopic=1070166\""
+              echo "CONFIG_VERSION_PRODUCT=\"Xiaomi BE7000\""
+              echo "# CONFIG_VERSION_FILENAMES is not set"
+              echo "# CONFIG_VERSION_CODE_FILENAMES is not set"
+            } >> .config
+          fi
           make defconfig
+          grep -E '^CONFIG_VERSION_NUMBER|^# CONFIG_VERSION_FILENAMES' .config || true
           # A debug-* build only has to produce the image: nothing it builds
           # is published to the feed, and packages built as modules (=m) are
           # never part of the image. Dropping them skips most of "Build
@@ -323,8 +353,8 @@ jobs:
           else
             case "${{ github.ref_name }}" in
               debug-*) gh release create "${{ github.ref_name }}" -R "${{ github.repository }}" --prerelease \
-                         --title "BE7000 native OpenWrt, отладочная сборка ${{ github.ref_name }}" "${args[@]}" "${assets[@]}" ;;
+                         --title "Beam WRT, отладочная сборка ${{ github.ref_name }}" "${args[@]}" "${assets[@]}" ;;
               *) gh release create "${{ github.ref_name }}" -R "${{ github.repository }}" --latest \
-                   --title "BE7000 native OpenWrt v$VER" "${args[@]}" "${assets[@]}" ;;
+                   --title "Beam WRT $VER" "${args[@]}" "${assets[@]}" ;;
             esac
           fi

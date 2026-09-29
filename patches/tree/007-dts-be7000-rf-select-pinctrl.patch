@@ -1,0 +1,57 @@
+From: Timofey Maykov <itnitro@gmail.com>
+Subject: dts: be7000: 5 GHz RF select lines as a pinctrl state, not hogs
+
+Stock drives TLMM6/TLMM7 low/high for the single 5 GHz radio and flips
+them to high/low for the split (set_5g_split, wifi_fw_mount). gpio-hogs
+keep the lines requested, so nothing can flip them at runtime. Set the
+single-radio levels with a config-only pinctrl state on the TLMM itself
+and let be7000-5g-split drive the lines through sysfs. No function in the
+state: the TLMM pinmux is strict and a mux owner would block the GPIO
+request.
+
+--- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
++++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
+@@ -990,20 +990,30 @@
+ 	status = "disabled";
+ };
+ 
+-/* Stock single-phy 5 GHz RF routing (TLMM6 low / TLMM7 high).
+- * Without this the 5 GHz radio has severely weak reception. */
++/* 5 GHz RF routing, TLMM6/TLMM7. Stock single-phy mode drives 6 low and
++ * 7 high; without it the 5 GHz radio has severely weak reception. The 5 GHz
++ * split (two radios) needs 6 high and 7 low, like stock set_5g_split, so the
++ * lines are set by a config-only pinctrl state instead of gpio-hogs: hogs
++ * would keep the lines requested, this leaves them to be7000-5g-split,
++ * which flips them through sysfs. No function here, the TLMM pinmux is
++ * strict and a mux owner would block the GPIO request. */
+ &tlmm {
+-	wifi-5g-rf-select0-hog {
+-		gpio-hog;
+-		gpios = <6 GPIO_ACTIVE_HIGH>;
+-		output-low;
+-		line-name = "wifi-5g-rf-select0";
+-	};
++	pinctrl-0 = <&wifi_5g_rf_default>;
++	pinctrl-names = "default";
++
++	wifi_5g_rf_default: wifi-5g-rf-default-state {
++		rf-select0-pins {
++			pins = "gpio6";
++			drive-strength = <8>;
++			bias-pull-up;
++			output-low;
++		};
+ 
+-	wifi-5g-rf-select1-hog {
+-		gpio-hog;
+-		gpios = <7 GPIO_ACTIVE_HIGH>;
+-		output-high;
+-		line-name = "wifi-5g-rf-select1";
++		rf-select1-pins {
++			pins = "gpio7";
++			drive-strength = <8>;
++			bias-pull-up;
++			output-high;
++		};
+ 	};
+ };

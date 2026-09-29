@@ -58,8 +58,8 @@
 				<a class="nb-brand" href="{{ dispatcher.build_url() }}">
 					<img class="nb-brand-logo" src="{{ media }}/logo.svg" alt="" width="34" height="34">
 					<span class="nb-brand-text">
-						<strong>{{ hostname }}</strong>
-						{% if (model): %}<small>{{ model }}</small>{% endif %}
+						<strong>Beam WRT</strong>
+						<small>{{ hostname }}{% if (model): %} · {{ model }}{% endif %}</small>
 					</span>
 				</a>
 				<button type="button" class="nb-search-btn" id="nb-search-open" hidden>

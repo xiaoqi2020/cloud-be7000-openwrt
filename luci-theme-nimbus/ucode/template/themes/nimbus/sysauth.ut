@@ -15,8 +15,8 @@
 	<form method="post" class="nb-login-card" autocomplete="on">
 		<div class="nb-login-head">
 			<img class="nb-login-logo" src="{{ media }}/logo.svg" alt="" width="56" height="56">
-			<h1>{{ striptags(board?.hostname ?? 'OpenWrt') }}</h1>
-			{% if (board?.model): %}<p>{{ striptags(board.model) }}</p>{% endif %}
+			<h1>Beam WRT</h1>
+			<p>{{ striptags(board?.hostname ?? '') }}{% if (board?.model): %} · {{ striptags(board.model) }}{% endif %}</p>
 		</div>
 
 		{% if (auth_message): %}

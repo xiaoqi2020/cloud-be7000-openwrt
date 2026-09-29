@@ -1,12 +1,17 @@
-# OpenWrt for Xiaomi BE7000
+<img src="docs/img/beam-wrt-logo.svg" alt="" width="72" height="72" align="left">
+
+# Beam WRT
+
+Firmware for the Xiaomi BE7000 based on OpenWrt.
+<br clear="left">
 
 [Русская версия](README.md) · <a href="#support-the-project"><img alt="Support the project" src="https://img.shields.io/badge/Support%20the%20project-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
 
-Fresh OpenWrt from main for the Xiaomi BE7000 (RC06 board, IPQ9554 SoC), kernel 6.18, no kexec. The system boots straight from flash, the stock firmware stays in the other slot, and you can go back to it at any time.
+Beam WRT is fresh OpenWrt from main for the Xiaomi BE7000 (RC06 board, IPQ9554 SoC), kernel 6.18, no kexec. Up to 1.3.1 the build was simply called be7000-openwrt, after the repository. The system boots straight from flash, the stock firmware stays in the other slot, and you can go back to it at any time.
 
 It is based on the kravasuper port (branch xiaomi_be7000, commit 790d036a). On top of it I added fixes to the Ethernet driver, without which the system on my board never got as far as the network ([patches.en.md](docs/patches.en.md)), and a set of services that make life with two slots and the factory bootloader predictable.
 
-The current version is **1.3.0**. Images are in [Releases](../../releases), checksums in sha256sums.txt. How to install it is in the section [Installation, updating, rollback](#installation-updating-rollback).
+The current version is **1.3.1**. Images are in [Releases](../../releases), checksums in sha256sums.txt. How to install it is in the section [Installation, updating, rollback](#installation-updating-rollback).
 
 ## Contents
 
@@ -35,7 +40,7 @@ My own board: RC06, IPQ9554 rev 1.1, stock firmware 1.1.38, 1 GB of RAM.
 ## Known issues
 
 - **Ethernet on some boards before 1.3.0.** The ports brought up a link, but the router did not receive a single frame. The cause was the kernel's RPM request for the l2 regulator, fixed in 1.3.0, details in [patches.en.md](docs/patches.en.md#ethernet-reception-on-some-boards). If the cable still does not work on your board, write in [issue #1](https://github.com/timofey-maykov/be7000-openwrt/issues/1) or in the 4PDA thread, you can get in over Wi-Fi (network OpenWrt-BE7000, password be7000openwrt).
-- On 5 GHz there is one radio for the whole band; two independent 5 GHz radios, like 5G-1 and 5G-2 on stock, are not supported yet.
+- 5 GHz is one radio for the whole band by default. It can be split into two independent ones, like 5G-1 and 5G-2 on stock (36-64 and 149-165), in the 5 GHz mode block at the top of Network, Wireless or with be7000-5g-split on, details in [patches.en.md](docs/patches.en.md#5-ghz-two-radios).
 - There is 19.4 MB of space for /overlay; for anything large it is better to move it to USB with the be7000-extroot command.
 - The kernel uses the mainline qcom-ppe rather than the vendor NSS, so acceleration is only at the PPE level.
 - The port lags behind OpenWrt main, updating the base may require reworking the patches.

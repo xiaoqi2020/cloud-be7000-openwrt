@@ -1,3 +1,5 @@
 *.ubi
 *.bin
 *.itb
+# vendor board data shipped in the image
+!overlay-files/lib/firmware/**/*.bin

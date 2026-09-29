@@ -21,49 +21,49 @@ var TEMPLATES = [
 	{
 		name: 'portainer',
 		title: 'Portainer CE',
-		hint: 'Полное управление докером в отдельном веб-интерфейсе, порт 9443',
+		hint: _('Полное управление докером в отдельном веб-интерфейсе, порт 9443'),
 		compose: 'services:\n  portainer:\n    image: portainer/portainer-ce:latest\n    container_name: portainer\n    restart: always\n    ports:\n      - "9443:9443"\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n      - portainer_data:/data\n\nvolumes:\n  portainer_data:\n'
 	},
 	{
 		name: 'adguard',
 		title: 'AdGuard Home',
-		hint: 'Блокировка рекламы и свой DNS, веб-интерфейс на 3000',
+		hint: _('Блокировка рекламы и свой DNS, веб-интерфейс на 3000'),
 		compose: 'services:\n  adguard:\n    image: adguard/adguardhome:latest\n    container_name: adguard\n    restart: always\n    ports:\n      - "3000:3000"\n      - "5353:53/udp"\n    volumes:\n      - adguard_work:/opt/adguardhome/work\n      - adguard_conf:/opt/adguardhome/conf\n\nvolumes:\n  adguard_work:\n  adguard_conf:\n'
 	},
 	{
 		name: 'uptime-kuma',
 		title: 'Uptime Kuma',
-		hint: 'Мониторинг доступности сервисов, порт 3001',
+		hint: _('Мониторинг доступности сервисов, порт 3001'),
 		compose: 'services:\n  uptime-kuma:\n    image: louislam/uptime-kuma:1\n    container_name: uptime-kuma\n    restart: always\n    ports:\n      - "3001:3001"\n    volumes:\n      - kuma_data:/app/data\n\nvolumes:\n  kuma_data:\n'
 	},
 	{
 		name: 'vaultwarden',
 		title: 'Vaultwarden',
-		hint: 'Свой менеджер паролей, совместим с клиентами Bitwarden, порт 8080',
+		hint: _('Свой менеджер паролей, совместим с клиентами Bitwarden, порт 8080'),
 		compose: 'services:\n  vaultwarden:\n    image: vaultwarden/server:latest\n    container_name: vaultwarden\n    restart: always\n    environment:\n      - WEBSOCKET_ENABLED=true\n    ports:\n      - "8080:80"\n    volumes:\n      - vw_data:/data\n\nvolumes:\n  vw_data:\n'
 	},
 	{
 		name: 'qbittorrent',
 		title: 'qBittorrent',
-		hint: 'Торрент-клиент с веб-интерфейсом на 8081, качает в /mnt',
+		hint: _('Торрент-клиент с веб-интерфейсом на 8081, качает в /mnt'),
 		compose: 'services:\n  qbittorrent:\n    image: lscr.io/linuxserver/qbittorrent:latest\n    container_name: qbittorrent\n    restart: always\n    environment:\n      - PUID=0\n      - PGID=0\n      - WEBUI_PORT=8081\n    ports:\n      - "8081:8081"\n      - "6881:6881"\n      - "6881:6881/udp"\n    volumes:\n      - qbt_config:/config\n      - /mnt:/downloads\n\nvolumes:\n  qbt_config:\n'
 	},
 	{
 		name: 'nginx-proxy-manager',
 		title: 'Nginx Proxy Manager',
-		hint: 'Обратный прокси с сертификатами по кнопке, панель на 81',
+		hint: _('Обратный прокси с сертификатами по кнопке, панель на 81'),
 		compose: 'services:\n  npm:\n    image: jc21/nginx-proxy-manager:latest\n    container_name: npm\n    restart: always\n    ports:\n      - "8880:80"\n      - "8443:443"\n      - "81:81"\n    volumes:\n      - npm_data:/data\n      - npm_ssl:/etc/letsencrypt\n\nvolumes:\n  npm_data:\n  npm_ssl:\n'
 	},
 	{
 		name: 'homeassistant',
 		title: 'Home Assistant',
-		hint: 'Умный дом, работает в сети хоста',
+		hint: _('Умный дом, работает в сети хоста'),
 		compose: 'services:\n  homeassistant:\n    image: ghcr.io/home-assistant/home-assistant:stable\n    container_name: homeassistant\n    restart: always\n    network_mode: host\n    volumes:\n      - ha_config:/config\n      - /etc/localtime:/etc/localtime:ro\n\nvolumes:\n  ha_config:\n'
 	},
 	{
 		name: 'watchtower',
 		title: 'Watchtower',
-		hint: 'Сам обновляет запущенные контейнеры до свежих образов',
+		hint: _('Сам обновляет запущенные контейнеры до свежих образов'),
 		compose: 'services:\n  watchtower:\n    image: containrrr/watchtower:latest\n    container_name: watchtower\n    restart: always\n    command: --cleanup --interval 86400\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n'
 	}
 ];

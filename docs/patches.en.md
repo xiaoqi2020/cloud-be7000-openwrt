@@ -34,8 +34,26 @@ The last two patches fix real driver bugs and do not depend on the board, they a
 | 002 | device profile: kmod-ath11k-ahb, without it the built-in 2.4 GHz radio is left without a driver |
 | 003 | sysupgrade writes to the slot it booted from |
 | 004 | mtdoops in the kernel config |
+| 006 | BE7000 DTS: a 12 MB reservation for the MLO global memory of the 5 GHz dual-MAC firmware, like stock mlo_global_mem |
 | 005 | BE7000 DTS: the kernel does not vote the l2 regulator over RPM, same as stock. With that request some boards had no reception on the UNIPHY0 lane from the QCA8084, i.e. no Ethernet at all. USB gets a fixed 1.8 V supply |
 
 ## Ethernet reception on some boards
 
 Before 1.3.0, on some boards Ethernet reception did not work after installation: there was a link, the MAC did not receive a single frame, Wi-Fi worked. The cause was power: the l2 regulator in the DTS came from the Qualcomm reference board, and the kernel's RPM request for it silenced the SoC receiver on the 10G-QXGMII lane to the QCA8084, while every lane register and clock matched stock. Found on zerc00l's board, which he gave us for remote testing. The fix is patch 005. The history of the search is in [issue #1](https://github.com/timofey-maykov/be7000-openwrt/issues/1) and in the 4PDA thread.
+
+## 5 GHz: two radios
+
+On stock the QCN9274 5 GHz module can run as two independent radios (5G-1 and 5G-2). For that stock loads a different firmware, dual-MAC, with different board data (board id 0x1008 instead of 0x02). It is already inside firmware-2.bin and ath12k can load it, but chose it only from the OTP board id, which the BE7000 does not have.
+
+| Patch (mac80211, ath12k) | What it does |
+|------|-----------|
+| 308 | the DTS board id also selects the dual-MAC firmware |
+| 309 | with fixed radio memory, hand the firmware every segment it asked for: dual-MAC asks for six, including MLO global memory, and never answers a reply with fewer |
+| 310 | ath12k board_id module parameter: overrides the DTS board id, with bit 0x1000 it lifts the DTS radio count cap |
+
+The mode is switched by be7000-5g-split (on, off, status) or the 5 GHz mode block at the top of Network, Wireless. The script sets the parameter, rebinds the module on the PCI bus without rebooting the router and adds a second 5 GHz radio to the Wi-Fi config with copies of the first one's networks. The choice is kept in /etc/config/be7000. At boot an init script at S09, before ath12k loads, prepares the mode and the module starts in it right away. The board data for dual-MAC is the stock one (bdwlan.b1008), shipped as board.bin.
+
+Like stock (set_5g_split), in the two-radio mode the script flips the RF lines: TLMM6 to 1 and TLMM7 to 0, the other way round for one radio. The DTS sets these lines with a pinctrl state instead of gpio-hogs, otherwise they could not be changed at runtime (tree 007). Stock has its own calibration for two radios, at ART offset 0x33000, for one radio 0x65000. The script puts the right one into the file ath12k asks for.
+
+With two radios iwinfo gives each radio only its own channels (tree 008), before that LuCI offered the lower radio the upper one's channels and the AP did not start.
+

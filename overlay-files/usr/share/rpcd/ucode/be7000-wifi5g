@@ -1,0 +1,44 @@
+'use strict';
+
+import { popen, access, readfile } from 'fs';
+
+const BIN = '/usr/sbin/be7000-5g-split';
+const LOG = '/tmp/be7000-5g-split.log';
+const PARAM = '/sys/module/ath12k/parameters/board_id';
+
+function sh(cmd) {
+	let fd = popen(cmd, 'r');
+	let out = fd ? trim(fd.read('all') ?? '') : '';
+	if (fd)
+		fd.close();
+	return out;
+}
+
+return {
+	'be7000-wifi5g': {
+		status: {
+			call: function() {
+				let running = sh('ps w | grep -q "[b]e7000-5g-split o[nf]" && echo 1') == '1';
+				return {
+					available: access(BIN) == true && access(PARAM) == true,
+					split: sh(`${BIN} status`) == 'on',
+					saved: sh('uci -q get be7000.wifi.split_5g') == '1',
+					running,
+					log: trim(readfile(LOG) ?? '')
+				};
+			}
+		},
+		set: {
+			args: { split: false },
+			call: function(req) {
+				if (access(BIN) != true)
+					return { ok: false, output: 'be7000-5g-split not found' };
+				let mode = req.args?.split ? 'on' : 'off';
+				// takes 20-40 s (firmware reload, wifi reload): run it detached
+				// and let the page poll status
+				sh(`(${BIN} ${mode}) >${LOG} 2>&1 </dev/null &`);
+				return { ok: true };
+			}
+		}
+	}
+};

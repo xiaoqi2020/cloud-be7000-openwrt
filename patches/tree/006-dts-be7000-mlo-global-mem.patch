@@ -1,0 +1,35 @@
+From: Timofey Maykov <itnitro@gmail.com>
+Subject: dts: be7000: reserve MLO global memory for the 5 GHz split
+
+The QCN9274 dual-MAC firmware (5 GHz split into two radios) asks for
+6.75 MB of MLO global memory besides the usual segments; a coherent
+allocation that big fails, so reserve 12 MB right after the radio's own
+region, where stock keeps mlo_global_mem_0 as well, and hand it to
+ath12k as a second memory-region. The single-MAC firmware uses 8 KB of
+it.
+
+--- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
++++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
+@@ -159,6 +159,13 @@
+ 			no-map;
+ 			reg = <0x0 0x54100000 0x0 0x3200000>;
+ 		};
++
++		/* MLO global memory for the QCN9274 dual-MAC firmware (5 GHz
++		 * split), like stock mlo_global_mem_0 */
++		mlo_global_mem: mlo-global-mem@57300000 {
++			no-map;
++			reg = <0x0 0x57300000 0x0 0xc00000>;
++		};
+ 	};
+ };
+ 
+@@ -346,7 +353,7 @@
+ 			qcom,num-radios = <1>;
+ 			nvmem-cells = <&macaddr_art_0 5>;
+ 			nvmem-cell-names = "mac-address";
+-			memory-region = <&qcn9224_pcie2_region>;
++			memory-region = <&qcn9224_pcie2_region>, <&mlo_global_mem>;
+ 		};
+ 	};
+ };

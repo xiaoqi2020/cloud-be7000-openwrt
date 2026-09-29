@@ -1,0 +1,329 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Благодарности"
+msgstr "Credits"
+
+msgid "Накопитель"
+msgstr "Storage"
+
+msgid "Docker: стеки"
+msgstr "Docker: stacks"
+
+msgid "Обновление сборки"
+msgstr "Build update"
+
+msgid "%.1f МБ"
+msgstr "%.1f MB"
+
+msgid "%.1f ГБ"
+msgstr "%.1f GB"
+
+msgid "%d МБ"
+msgstr "%d MB"
+
+msgid "Перенести /overlay на %s"
+msgstr "Move /overlay to %s"
+
+msgid "Диск будет отформатирован, всё его содержимое пропадёт."
+msgstr "The disk will be formatted, everything on it will be lost."
+
+msgid "Текущие настройки и установленные пакеты переедут на него. Изменение вступит в силу после перезагрузки."
+msgstr "The current settings and installed packages move to it. The change takes effect after a reboot."
+
+msgid "Отмена"
+msgstr "Cancel"
+
+msgid "Переношу"
+msgstr "Moving"
+
+msgid "Форматирование и копирование, это может занять минуту"
+msgstr "Formatting and copying, this can take a minute"
+
+msgid "Готово. Перезагрузите роутер, чтобы /overlay переехал."
+msgstr "Done. Reboot the router to move /overlay."
+
+msgid "Не получилось"
+msgstr "Failed"
+
+msgid "Форматировать и перенести"
+msgstr "Format and move"
+
+msgid "Вернуть /overlay на внутреннюю флешку"
+msgstr "Move /overlay back to the internal flash"
+
+msgid "Данные на диске останутся, но использоваться перестанут. Изменение вступит в силу после перезагрузки."
+msgstr "The data on the disk stays but is no longer used. The change takes effect after a reboot."
+
+msgid "Готово. Перезагрузите роутер."
+msgstr "Done. Reboot the router."
+
+msgid "Вернуть"
+msgstr "Move back"
+
+msgid "Накопители не найдены. Вставьте диск в порт USB и обновите страницу."
+msgstr "No disks found. Plug a disk into the USB port and reload the page."
+
+msgid "Устройство"
+msgstr "Device"
+
+msgid "Размер"
+msgstr "Size"
+
+msgid "Модель"
+msgstr "Model"
+
+msgid "используется"
+msgstr "in use"
+
+msgid "Перенести сюда"
+msgstr "Move here"
+
+msgid "Всё, что роутер помнит между перезагрузками, лежит в /overlay: настройки, установленные пакеты, списки. Встроенного места немного, поэтому его можно перенести на USB-диск."
+msgstr "Everything the router keeps across reboots lives in /overlay: settings, installed packages, lists. The built-in space is small, so it can be moved to a USB disk."
+
+msgid "Сейчас"
+msgstr "Now"
+
+msgid "Раздел"
+msgstr "Partition"
+
+msgid "Всего"
+msgstr "Total"
+
+msgid "Свободно"
+msgstr "Free"
+
+msgid "Вернуть на внутреннюю флешку"
+msgstr "Back to the internal flash"
+
+msgid "Доступные диски"
+msgstr "Available disks"
+
+msgid "Выполняется"
+msgstr "Running"
+
+msgid "Готово"
+msgstr "Done"
+
+msgid "Новый стек"
+msgstr "New stack"
+
+msgid "Стек %s"
+msgstr "Stack %s"
+
+msgid "Имя (латиница, цифры, дефис): "
+msgstr "Name (Latin letters, digits, hyphen): "
+
+msgid "Файл docker-compose.yml"
+msgstr "docker-compose.yml file"
+
+msgid "Имя может содержать только латиницу, цифры, дефис и подчёркивание"
+msgstr "The name may contain only Latin letters, digits, hyphen and underscore"
+
+msgid "Сохраняю"
+msgstr "Saving"
+
+msgid "Сохранить"
+msgstr "Save"
+
+msgid "Проверьте имя"
+msgstr "Check the name"
+
+msgid "Не получилось сохранить"
+msgstr "Could not save"
+
+msgid "Запускаю"
+msgstr "Starting"
+
+msgid "Сохранить и запустить"
+msgstr "Save and start"
+
+msgid "Docker не установлен. Поставьте его командой be7000-docker setup, она сама найдёт диск и положит данные туда, а не в 19 МБ внутренней памяти."
+msgstr "Docker is not installed. Install it with be7000-docker setup, it finds a disk by itself and keeps the data there instead of the 19 MB of internal memory."
+
+msgid "Docker установлен, но служба не отвечает. Проверьте /etc/init.d/dockerd status"
+msgstr "Docker is installed but the service does not answer. Check /etc/init.d/dockerd status"
+
+msgid "Docker %s работает. Контейнеры, образы, сети и тома по отдельности живут в разделе Сервисы, Dockerman."
+msgstr "Docker %s is running. Containers, images, networks and volumes one by one are under Services, Dockerman."
+
+msgid "Стек"
+msgstr "Stack"
+
+msgid "Состояние"
+msgstr "State"
+
+msgid "Пока ни одного стека. Возьмите готовый ниже или создайте свой."
+msgstr "No stacks yet. Take a ready-made one below or create your own."
+
+msgid "остановлен"
+msgstr "stopped"
+
+msgid "Запустить"
+msgstr "Start"
+
+msgid "Останавливаю"
+msgstr "Stopping"
+
+msgid "Остановить"
+msgstr "Stop"
+
+msgid "Обновляю образы"
+msgstr "Updating images"
+
+msgid "Обновить"
+msgstr "Update"
+
+msgid "Читаю журнал"
+msgstr "Reading the log"
+
+msgid "Журнал"
+msgstr "Log"
+
+msgid "Править"
+msgstr "Edit"
+
+msgid "Удалить стек %s вместе с его томами?"
+msgstr "Delete stack %s together with its volumes?"
+
+msgid "Удаляю"
+msgstr "Deleting"
+
+msgid "Удалить"
+msgstr "Delete"
+
+msgid "Готовый стек"
+msgstr "Ready-made stack"
+
+msgid "Что это"
+msgstr "What it is"
+
+msgid "Посмотреть и изменить"
+msgstr "View and edit"
+
+msgid "Разворачиваю %s"
+msgstr "Deploying %s"
+
+msgid "Развернуть"
+msgstr "Deploy"
+
+msgid "Мои стеки"
+msgstr "My stacks"
+
+msgid "Создать стек"
+msgstr "Create a stack"
+
+msgid "Готовые"
+msgstr "Ready-made"
+
+msgid "Обслуживание"
+msgstr "Maintenance"
+
+msgid "Считаю занятое место"
+msgstr "Counting used space"
+
+msgid "Сколько занято"
+msgstr "Space used"
+
+msgid "Чищу"
+msgstr "Cleaning"
+
+msgid "Убрать мусор"
+msgstr "Clean up"
+
+msgid "Удалить все образы, которые не используются запущенными контейнерами?"
+msgstr "Delete all images not used by running containers?"
+
+msgid "Чищу образы"
+msgstr "Cleaning images"
+
+msgid "Удалить лишние образы"
+msgstr "Delete unused images"
+
+msgid "Удалить тома, которые ни к чему не подключены? Данные в них пропадут."
+msgstr "Delete volumes not attached to anything? Their data will be lost."
+
+msgid "Чищу тома"
+msgstr "Cleaning volumes"
+
+msgid "Удалить неподключённые тома"
+msgstr "Delete unattached volumes"
+
+msgid "Полное управление докером в отдельном веб-интерфейсе, порт 9443"
+msgstr "Full Docker management in its own web interface, port 9443"
+
+msgid "Блокировка рекламы и свой DNS, веб-интерфейс на 3000"
+msgstr "Ad blocking and your own DNS, web interface on 3000"
+
+msgid "Мониторинг доступности сервисов, порт 3001"
+msgstr "Uptime monitoring of services, port 3001"
+
+msgid "Свой менеджер паролей, совместим с клиентами Bitwarden, порт 8080"
+msgstr "Your own password manager, works with Bitwarden clients, port 8080"
+
+msgid "Торрент-клиент с веб-интерфейсом на 8081, качает в /mnt"
+msgstr "Torrent client with a web interface on 8081, downloads to /mnt"
+
+msgid "Обратный прокси с сертификатами по кнопке, панель на 81"
+msgstr "Reverse proxy with one-click certificates, panel on 81"
+
+msgid "Умный дом, работает в сети хоста"
+msgstr "Smart home, runs in the host network"
+
+msgid "Сам обновляет запущенные контейнеры до свежих образов"
+msgstr "Updates running containers to fresh images by itself"
+
+msgid "не удалось проверить"
+msgstr "check failed"
+
+msgid "Поставить %s поверх %s? Настройки сохранятся, роутер перезагрузится, связь пропадёт на пару минут."
+msgstr "Install %s over %s? Settings are kept, the router reboots, the connection drops for a couple of minutes."
+
+msgid "Обновление"
+msgstr "Update"
+
+msgid "Скачиваю образ и проверяю сумму. Не выключайте роутер."
+msgstr "Downloading the image and checking its checksum. Do not power off the router."
+
+msgid "не удалось скачать образ"
+msgstr "could not download the image"
+
+msgid "Роутер перезагружается в новую версию. Страница обновится сама."
+msgstr "The router is rebooting into the new version. The page reloads by itself."
+
+msgid "Установлено"
+msgstr "Installed"
+
+msgid "собрано %s"
+msgstr "built %s"
+
+msgid "Последняя на GitHub"
+msgstr "Latest on GitHub"
+
+msgid "образ %s"
+msgstr "image %s"
+
+msgid "ещё не проверяли"
+msgstr "not checked yet"
+
+msgid "Нажмите \"Проверить\", страница спросит GitHub, есть ли версия новее."
+msgstr "Press \"Check\" and the page asks GitHub whether there is a newer version."
+
+msgid "Есть обновление. Ставится обычным sysupgrade с сохранением настроек, образ проверяется по контрольной сумме из релиза."
+msgstr "An update is available. It installs with a regular sysupgrade that keeps settings, the image is checked against the checksum from the release."
+
+msgid "Стоит последняя версия."
+msgstr "The latest version is installed."
+
+msgid "Проверить"
+msgstr "Check"
+
+msgid "Скачать и установить %s"
+msgstr "Download and install %s"
+
+msgid "Что в %s"
+msgstr "What is in %s"
+
+msgid "Проверка новых версий этой сборки на GitHub и установка без ручной загрузки файлов. Модули ядра и пакеты фида после обновления подхватываются под новое ядро сами."
+msgstr "Checks GitHub for new versions of this build and installs them without downloading files by hand. Kernel modules and feed packages are picked up for the new kernel by themselves after the update."
