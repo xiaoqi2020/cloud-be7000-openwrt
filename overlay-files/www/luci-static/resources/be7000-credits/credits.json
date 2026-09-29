@@ -73,6 +73,13 @@
 					"url": "https://4pda.to/forum/index.php?showuser=1995297",
 					"ru": "extroot поверх общего тома и каталог стеков Docker.",
 					"en": "extroot over the shared volume and the Docker stacks directory."
+				},
+				{
+					"name": "FOV5",
+					"site": "4PDA",
+					"url": "https://4pda.to/forum/index.php?showuser=3121811",
+					"ru": "Подсказал хранить настройки OpenWrt в томе стока, с 1.2.6 откат на сток их не стирает.",
+					"en": "Suggested keeping OpenWrt settings in the stock volume, since 1.2.6 a rollback to stock no longer wipes them."
 				}
 			]
 		},
@@ -110,13 +117,6 @@
 					"url": "https://github.com/openwrt/openwrt/pull/25322",
 					"ru": "Порт Route10 (SkytheFolf), подсказка про сброс QCA8084 со стороны nsscc.",
 					"en": "The Route10 port (SkytheFolf), the hint about resetting the QCA8084 from nsscc."
-				},
-				{
-					"name": "FOV5",
-					"site": "4PDA",
-					"url": "https://4pda.to/forum/index.php?showuser=3121811",
-					"ru": "Разбор OTA стока и загрузчика, идея хранить настройки OpenWrt в томе стока.",
-					"en": "Analysis of the stock OTA and bootloader, the idea of keeping OpenWrt settings in the stock volume."
 				},
 				{
 					"name": "OpenWrt",
