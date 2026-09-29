@@ -18,6 +18,12 @@ MIN_FREE_MB=1024
 
 die() { echo "$*" >&2; exit 1; }
 
+# messages follow the LuCI language (luci.main.lang): English for en*, else Russian
+EN=0
+case "$(uci -q get luci.main.lang)" in en*) EN=1 ;; esac
+# t <russian> <english>
+t() { [ "$EN" = 1 ] && echo "$2" || echo "$1"; }
+
 data_root_now() {
 	uci -q get dockerd.globals.data_root || echo "/opt/docker/"
 }
@@ -46,22 +52,22 @@ suggest_data_root() {
 
 cmd_status() {
 	if installed; then
-		echo "dockerd: установлен, $(dockerd --version 2>/dev/null | head -1)"
+		echo "dockerd: $(t "установлен" "installed"), $(dockerd --version 2>/dev/null | head -1)"
 	else
-		echo "dockerd: не установлен"
+		echo "dockerd: $(t "не установлен" "not installed")"
 	fi
 	local dr free
 	dr="$(data_root_now)"
 	free="$(free_mb_of "$dr")"
-	echo "данные: $dr"
-	echo "свободно там: ${free:-?} МБ"
+	echo "$(t "данные" "data"): $dr"
+	echo "$(t "свободно там: ${free:-?} МБ" "free there: ${free:-?} MB")"
 	if [ -n "$free" ] && [ "$free" -lt "$MIN_FREE_MB" ]; then
 		echo
-		echo "Этого мало. Образы докера считаются сотнями мегабайт."
-		echo "Подключите диск и запустите: be7000-docker setup"
+		t "Этого мало. Образы докера считаются сотнями мегабайт." "That is not enough. Docker images take hundreds of megabytes."
+		t "Подключите диск и запустите: be7000-docker setup" "Plug in a disk and run: be7000-docker setup"
 	fi
 	echo
-	echo "служба: $(/etc/init.d/dockerd status 2>/dev/null || echo 'не запущена')"
+	echo "$(t "служба" "service"): $(/etc/init.d/dockerd status 2>/dev/null || t 'не запущена' 'not running')"
 }
 
 cmd_setup() {
@@ -70,33 +76,34 @@ cmd_setup() {
 	if [ -n "$want" ]; then
 		dr="$want"
 	else
-		dr="$(suggest_data_root)" || die "Не нашёл подключённого диска со свободным местом от ${MIN_FREE_MB} МБ.
-Подключите диск, смонтируйте его и укажите путь: be7000-docker setup --data-root /mnt/sda1/docker"
+		dr="$(suggest_data_root)" || die "$(t "Не нашёл подключённого диска со свободным местом от ${MIN_FREE_MB} МБ.
+Подключите диск, смонтируйте его и укажите путь: be7000-docker setup --data-root /mnt/sda1/docker" "No mounted disk with at least ${MIN_FREE_MB} MB free found.
+Plug in a disk, mount it and give the path: be7000-docker setup --data-root /mnt/sda1/docker")"
 	fi
 
 	free="$(free_mb_of "$dr")"
-	[ -n "$free" ] || die "Не удалось определить свободное место для $dr"
+	[ -n "$free" ] || die "$(t "Не удалось определить свободное место для $dr" "Could not find out the free space for $dr")"
 	if [ "$free" -lt "$MIN_FREE_MB" ]; then
-		echo "Свободно всего ${free} МБ, это мало для докера." >&2
-		[ "$yes" = 1 ] || die "Если уверены, повторите с --yes"
+		t "Свободно всего ${free} МБ, это мало для докера." "Only ${free} MB free, that is not enough for Docker." >&2
+		[ "$yes" = 1 ] || die "$(t "Если уверены, повторите с --yes" "If you are sure, repeat with --yes")"
 	fi
 
 	if [ "$yes" != 1 ]; then
-		echo "Поставлю: $PKGS"
-		echo "Данные докера будут лежать в: $dr (свободно ${free} МБ)"
-		echo "Повторите с --yes, чтобы выполнить."
+		echo "$(t "Поставлю" "Will install"): $PKGS"
+		t "Данные докера будут лежать в: $dr (свободно ${free} МБ)" "Docker data will live in: $dr (${free} MB free)"
+		t "Повторите с --yes, чтобы выполнить." "Repeat with --yes to do it."
 		exit 1
 	fi
 
 	if ! installed; then
-		echo "Ставлю пакеты"
+		t "Ставлю пакеты" "Installing packages"
 		apk update >/dev/null 2>&1 || true
 		# shellcheck disable=SC2086
-		apk add $PKGS || die "Не удалось поставить пакеты. Проверьте apk update."
+		apk add $PKGS || die "$(t "Не удалось поставить пакеты. Проверьте apk update." "Could not install the packages. Check apk update.")"
 	fi
 
 	mkdir -p "$dr"
-	echo "Прописываю data-root"
+	t "Прописываю data-root" "Setting data-root"
 	uci -q set dockerd.globals.data_root="$dr"
 	uci -q commit dockerd
 
@@ -104,17 +111,17 @@ cmd_setup() {
 	/etc/init.d/dockerd restart
 
 	echo
-	echo "Готово. Управление в LuCI: Сервисы, Dockerman."
-	echo "Там контейнеры, образы, сети, тома, логи и консоль внутрь контейнера."
+	t "Готово. Управление в LuCI: Сервисы, Dockerman." "Done. Manage it in LuCI: Services, Dockerman."
+	t "Там контейнеры, образы, сети, тома, логи и консоль внутрь контейнера." "Containers, images, networks, volumes, logs and a console into containers are there."
 }
 
 cmd_portainer() {
 	local yes="$1"
-	installed || die "Сначала be7000-docker setup"
+	installed || die "$(t "Сначала be7000-docker setup" "Run be7000-docker setup first")"
 	if [ "$yes" != 1 ]; then
-		echo "Запущу Portainer CE контейнером, веб-интерфейс на порту 9443 по https."
-		echo "Это отдельный интерфейс поверх докера, со стеками и compose."
-		echo "Повторите с --yes."
+		t "Запущу Portainer CE контейнером, веб-интерфейс на порту 9443 по https." "Will start Portainer CE as a container, web interface on port 9443 over https."
+		t "Это отдельный интерфейс поверх докера, со стеками и compose." "It is a separate interface on top of Docker, with stacks and compose."
+		t "Повторите с --yes." "Repeat with --yes."
 		exit 1
 	fi
 	docker volume create portainer_data >/dev/null
@@ -123,7 +130,7 @@ cmd_portainer() {
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v portainer_data:/data \
 		portainer/portainer-ce:latest
-	echo "Portainer поднят. Откройте https://<адрес роутера>:9443 и задайте пароль."
+	t "Portainer поднят. Откройте https://<адрес роутера>:9443 и задайте пароль." "Portainer is up. Open https://<router address>:9443 and set a password."
 }
 
 ACTION="$1"

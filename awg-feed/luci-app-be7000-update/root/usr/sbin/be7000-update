@@ -161,21 +161,21 @@ print_status() {
 		printf '{"ok":true,"installed":{"version":"%s","tag":"%s","date":"%s","build":"%s"},"downloaded":%s,"latest":%s}\n' \
 			"$cur" "$(json_escape "$tagf")" "$(json_escape "$datef")" "$(json_escape "$build")" "$dl" "$latest"
 	else
-		echo "установлено: $cur${tagf:+ ($tagf)}${datef:+, собрано $datef}"
+		t "установлено: $cur${tagf:+ ($tagf)}${datef:+, собрано $datef}" "installed: $cur${tagf:+ ($tagf)}${datef:+, built $datef}"
 		if [ -s "$STATE" ]; then
 			local latest avail
 			latest=$(jsonfilter -i "$STATE" -e '@.latest')
 			avail=$(jsonfilter -i "$STATE" -e '@.available')
 			if [ "$avail" = 1 ] || [ "$avail" = true ]; then
-				echo "доступно: $latest, be7000-update apply поставит её"
+				t "доступно: $latest, be7000-update apply поставит её" "available: $latest, be7000-update apply installs it"
 			else
-				echo "последняя на GitHub: $latest, обновлять нечего"
+				t "последняя на GitHub: $latest, обновлять нечего" "latest on GitHub: $latest, nothing to update"
 			fi
 		else
-			echo "на GitHub ещё не смотрели, be7000-update check"
+			t "на GitHub ещё не смотрели, be7000-update check" "GitHub not checked yet, run be7000-update check"
 		fi
 		if $dl; then
-			echo "образ уже скачан и проверен: $IMG"
+			t "образ уже скачан и проверен: $IMG" "image already downloaded and verified: $IMG"
 		fi
 	fi
 	return 0
@@ -196,11 +196,11 @@ apply)
 	fi
 	downloaded_ok || do_download
 	if [ "$YES" != 1 ]; then
-		printf 'Поставить %s поверх %s? Настройки сохранятся, роутер перезагрузится. [y/N] ' "$(jsonfilter -i "$STATE" -e '@.latest')" "$(installed_version)"
+		printf "$(t 'Поставить %s поверх %s? Настройки сохранятся, роутер перезагрузится. [y/N] ' 'Install %s over %s? Settings are kept, the router reboots. [y/N] ')" "$(jsonfilter -i "$STATE" -e '@.latest')" "$(installed_version)"
 		read -r ans
-		case "$ans" in y|Y|д|Д) ;; *) echo "отменено"; exit 1 ;; esac
+		case "$ans" in y|Y|д|Д) ;; *) t "отменено" "cancelled"; exit 1 ;; esac
 	fi
-	echo "запускаю sysupgrade, связь пропадёт на пару минут" | tee -a "$LOG"
+	t "запускаю sysupgrade, связь пропадёт на пару минут" "starting sysupgrade, the connection drops for a couple of minutes" | tee -a "$LOG"
 	exec sysupgrade -v "$IMG" ;;
 *)
 	echo "usage: be7000-update status|check|download|apply [--json] [--yes]" >&2; exit 2 ;;

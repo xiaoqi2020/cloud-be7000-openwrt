@@ -7,6 +7,7 @@
 - The 5 GHz module can be split into two independent radios, like 5G-1 and 5G-2 on stock. The lower one runs on channels 36-64, the upper one from 149 up, each with its own channel and clients. The mode is changed in the 5 GHz mode block at the top of Network, Wireless or with be7000-5g-split on, the router does not reboot. Like stock, the driver loads the dual-MAC firmware with board data 0x1008, flips the RF lines TLMM6 and TLMM7 and takes a separate calibration from ART. The choice survives reboots and updates. Tested on zerc00l's board, both radios hold MCS 9, cable and USB work as before. Thanks to Quarx, his build showed that stock flips the RF lines.
 - With two radios LuCI offers each radio only its own channels.
 - The wireless network list is aligned. Badges, descriptions and buttons sit in even columns, networks are marked under their radio.
+- The Storage, Build update and Docker: stacks pages are translated to English and follow the LuCI language, like Credits. The be7000-docker and be7000-update console tools follow it too.
 - A Project block at the top of Status, Overview with the build version and links to the sources, releases, the 4PDA topic, issues, build update and credits.
 - LuCI, /etc/openwrt_release and the SSH greeting show the build version, Beam WRT 1.3.1, not OpenWrt SNAPSHOT.
 - The feed gained USB tethering from a phone. Android connects over RNDIS, iPhone over ipheth and usbmuxd. Also Huawei NCM modems and the QMI and 3G protocols for LuCI. All of it installs with apk.
