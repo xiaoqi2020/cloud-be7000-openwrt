@@ -40,7 +40,12 @@ var T = {
 		high: 'Верхнее',
 		one: 'Радио 5 ГГц',
 		mhz: 'МГц',
-		clients: 'клиентов',
+		clients: function(n) {
+			var m10 = n % 10, m100 = n % 100;
+			if (m10 == 1 && m100 != 11) return 'клиент';
+			if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'клиента';
+			return 'клиентов';
+		},
 		off: 'выключено',
 		toSplit: 'Разделить на два радио',
 		toSingle: 'Вернуть одно радио',
@@ -81,7 +86,7 @@ var T = {
 		high: 'Upper',
 		one: '5 GHz radio',
 		mhz: 'MHz',
-		clients: 'clients',
+		clients: function(n) { return n == 1 ? 'client' : 'clients'; },
 		off: 'off',
 		toSplit: 'Split into two radios',
 		toSingle: 'Back to one radio',
@@ -177,7 +182,7 @@ function radioChip(tx, r) {
 		E('span', { 'class': 'b5-dot' + (r.up ? '' : ' off') }),
 		E('b', {}, label),
 		r.up
-			? E('span', { 'class': 'b5-sub' }, '%s %s%s, %d %s'.format(tx.ch, r.channel || '?', mhz ? ', ' + mhz + ' ' + tx.mhz : '', r.clients, tx.clients))
+			? E('span', { 'class': 'b5-sub' }, '%s %s%s, %d %s'.format(tx.ch, r.channel || '?', mhz ? ', ' + mhz + ' ' + tx.mhz : '', r.clients, tx.clients(r.clients)))
 			: E('span', { 'class': 'b5-sub' }, tx.off)
 	]);
 }
