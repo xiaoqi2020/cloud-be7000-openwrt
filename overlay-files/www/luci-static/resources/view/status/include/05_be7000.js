@@ -78,13 +78,13 @@ function icon(name) {
 	return svg;
 }
 
+// every link opens in a new tab, the build's own pages too
 function link(href, name, text, cls) {
-	var ext = /^https?:/.test(href);
 	return E('a', {
 		'href': href,
 		'class': cls || '',
-		'target': ext ? '_blank' : null,
-		'rel': ext ? 'noopener' : null
+		'target': '_blank',
+		'rel': 'noopener'
 	}, [ icon(name), text ]);
 }
 
