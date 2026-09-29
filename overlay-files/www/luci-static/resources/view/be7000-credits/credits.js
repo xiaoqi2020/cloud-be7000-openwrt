@@ -7,11 +7,11 @@
 // banner is built from the same file (/usr/libexec/be7000-banner).
 
 var LOGO = [
-	'  _______                     ________        __',
-	' |       |.-----.-----.-----.|  |  |  |.----.|  |_',
-	' |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|',
-	' |_______||   __|_____|__|__||________||__|  |____|',
-	'          |__| W I R E L E S S   F R E E D O M'
+	' ______                         ________ ______ _______',
+	'|   __ \\.-----.---.-.--------. |  |  |  |   __ \\_     _|',
+	'|   __ <|  -__|  _  |        | |  |  |  |      < |   |',
+	'|______/|_____|___._|__|__|__| |________|___|__| |___|',
+	'          W I - F I   7   F O R   B E 7 0 0 0'
 ].join('\n');
 
 var TEXT = {
@@ -70,7 +70,7 @@ return view.extend({
 		var body = [];
 
 		body.push(E('div', { 'class': 'bct-logo' }, LOGO));
-		body.push(E('div', { 'class': 'bct-hi' }, 'be7000-openwrt' + (ver ? ' ' + ver : '') + '. ' + tx.hello));
+		body.push(E('div', { 'class': 'bct-hi' }, 'Beam WRT' + (ver ? ' ' + ver : '') + '. ' + tx.hello));
 
 		d.groups.forEach(function(g) {
 			body.push(E('div', { 'class': 'bct-gt' }, '# ' + t(g.title)));
@@ -118,7 +118,7 @@ return view.extend({
 				E('i', { 'style': 'background:#ff5f56' }),
 				E('i', { 'style': 'background:#ffbd2e' }),
 				E('i', { 'style': 'background:#27c93f' }),
-				E('span', {}, 'root@OpenWrt: ~/credits')
+				E('span', {}, 'root@BeamWRT: ~/credits')
 			]),
 			E('div', { 'class': 'bct-in' }, body)
 		]);

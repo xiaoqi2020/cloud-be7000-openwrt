@@ -1,8 +1,13 @@
-# OpenWrt for Xiaomi BE7000
+<img src="docs/img/beam-wrt-logo.svg" alt="" width="72" height="72" align="left">
+
+# Beam WRT
+
+Firmware for the Xiaomi BE7000 based on OpenWrt.
+<br clear="left">
 
 [Русская версия](README.md) · <a href="#support-the-project"><img alt="Support the project" src="https://img.shields.io/badge/Support%20the%20project-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
 
-Fresh OpenWrt from main for the Xiaomi BE7000 (RC06 board, IPQ9554 SoC), kernel 6.18, no kexec. The system boots straight from flash, the stock firmware stays in the other slot, and you can go back to it at any time.
+Beam WRT is fresh OpenWrt from main for the Xiaomi BE7000 (RC06 board, IPQ9554 SoC), kernel 6.18, no kexec. Up to 1.3.1 the build was simply called be7000-openwrt, after the repository. The system boots straight from flash, the stock firmware stays in the other slot, and you can go back to it at any time.
 
 It is based on the kravasuper port (branch xiaomi_be7000, commit 790d036a). On top of it I added fixes to the Ethernet driver, without which the system on my board never got as far as the network ([patches.en.md](docs/patches.en.md)), and a set of services that make life with two slots and the factory bootloader predictable.
 

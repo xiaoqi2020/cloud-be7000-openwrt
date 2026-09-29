@@ -155,23 +155,23 @@ jobs:
             debug-*|*:true) echo "CONFIG_PACKAGE_tcpdump-mini=y" >> .config ;;
           esac
           # the version LuCI, /etc/openwrt_release and the banner show:
-          # "OpenWrt BE7000 1.3.1, r20260623-790d036a" instead of SNAPSHOT.
-          # Image file names stay as they are, the installer and
+          # "Beam WRT 1.3.1 r20260623-790d036a" instead of "OpenWrt SNAPSHOT".
+          # Image file names stay openwrt-... (tree 009), the installer and
           # be7000-update look the assets up by name.
           TAG="${{ github.ref_name }}"
           case "$TAG" in
-            v*) REL="BE7000 ${TAG#v}" ;;
-            debug-*) REL="BE7000 $TAG" ;;
+            v*) REL="${TAG#v}" ;;
+            debug-*) REL="$TAG" ;;
             *) REL="" ;;
           esac
           if [ -n "$REL" ]; then
             {
               echo "CONFIG_IMAGEOPT=y"
               echo "CONFIG_VERSIONOPT=y"
-              echo "CONFIG_VERSION_DIST=\"OpenWrt\""
+              echo "CONFIG_VERSION_DIST=\"Beam WRT\""
               echo "CONFIG_VERSION_NUMBER=\"$REL\""
               echo "CONFIG_VERSION_CODE=\"$VERSION_STRING\""
-              echo "CONFIG_VERSION_MANUFACTURER=\"be7000-openwrt\""
+              echo "CONFIG_VERSION_MANUFACTURER=\"Beam WRT\""
               echo "CONFIG_VERSION_MANUFACTURER_URL=\"https://github.com/timofey-maykov/be7000-openwrt\""
               echo "CONFIG_VERSION_HOME_URL=\"https://github.com/timofey-maykov/be7000-openwrt\""
               echo "CONFIG_VERSION_BUG_URL=\"https://github.com/timofey-maykov/be7000-openwrt/issues\""
@@ -353,8 +353,8 @@ jobs:
           else
             case "${{ github.ref_name }}" in
               debug-*) gh release create "${{ github.ref_name }}" -R "${{ github.repository }}" --prerelease \
-                         --title "BE7000 native OpenWrt, отладочная сборка ${{ github.ref_name }}" "${args[@]}" "${assets[@]}" ;;
+                         --title "Beam WRT, отладочная сборка ${{ github.ref_name }}" "${args[@]}" "${assets[@]}" ;;
               *) gh release create "${{ github.ref_name }}" -R "${{ github.repository }}" --latest \
-                   --title "BE7000 native OpenWrt v$VER" "${args[@]}" "${assets[@]}" ;;
+                   --title "Beam WRT $VER" "${args[@]}" "${assets[@]}" ;;
             esac
           fi

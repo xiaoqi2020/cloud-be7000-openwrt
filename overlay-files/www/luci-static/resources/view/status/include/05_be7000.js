@@ -10,9 +10,12 @@ var FORUM = 'https://4pda.to/forum/index.php?showtopic=1070166';
 
 var callSystemBoard = rpc.declare({ object: 'system', method: 'board' });
 
+// the Beam WRT mark, same as the theme's logo.svg
+var LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"> <defs> <linearGradient id="be7k-bg" x1="0" y1="64" x2="64" y2="0" gradientUnits="userSpaceOnUse"> <stop offset="0" stop-color="#4f46e5"/> <stop offset="1" stop-color="#06b6d4"/> </linearGradient> <linearGradient id="be7k-ray" x1="14" y1="32" x2="62" y2="32" gradientUnits="userSpaceOnUse"> <stop offset="0" stop-color="#fff" stop-opacity=".55"/> <stop offset="1" stop-color="#fff" stop-opacity="0"/> </linearGradient> </defs> <rect width="64" height="64" rx="15" fill="url(#be7k-bg)"/> <path d="M30 32 L62 22 L62 42 Z" fill="url(#be7k-ray)"/> <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"> <path d="M17 14 V50"/> <path d="M17 14 H26 A8.5 8.5 0 0 1 26 31 H17"/> <path d="M17 31 H28 A9.5 9.5 0 0 1 28 50 H17"/> </g> <g fill="none" stroke="#fff" stroke-linecap="round"> <path d="M44 24 A12 12 0 0 1 44 40" stroke-width="3.6" stroke-opacity=".9"/> <path d="M50.5 19 A18 18 0 0 1 50.5 45" stroke-width="3.2" stroke-opacity=".6"/> </g> </svg>';
+
 var TEXT = {
 	ru: {
-		sub: 'OpenWrt для Xiaomi BE7000 на ядре 6.18',
+		sub: 'Прошивка для Xiaomi BE7000 на базе OpenWrt, ядро 6.18',
 		version: 'Версия',
 		github: 'Исходники на GitHub',
 		releases: 'Релизы',
@@ -22,7 +25,7 @@ var TEXT = {
 		credits: 'Благодарности'
 	},
 	en: {
-		sub: 'OpenWrt for the Xiaomi BE7000 on kernel 6.18',
+		sub: 'Firmware for the Xiaomi BE7000 based on OpenWrt, kernel 6.18',
 		version: 'Version',
 		github: 'Sources on GitHub',
 		releases: 'Releases',
@@ -44,8 +47,8 @@ var ICONS = {
 
 var CSS = `
 .be7k-card{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;padding:4px 2px 2px}
-.be7k-logo{flex:none;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-	background:linear-gradient(135deg,var(--nb-accent,#4f46e5),var(--nb-accent-2,#06b6d4));color:#fff}
+.be7k-logo{flex:none;width:48px;height:48px}
+.be7k-logo svg{width:48px;height:48px;display:block;border-radius:12px}
 .be7k-head{flex:1 1 220px;min-width:0}
 .be7k-name{font-size:17px;font-weight:650;letter-spacing:-.01em;color:var(--nb-text,inherit);text-decoration:none}
 .be7k-name:hover{text-decoration:underline}
@@ -99,15 +102,15 @@ return baseclass.extend({
 		var tx = TEXT[/^en/i.test(document.documentElement.lang || '') ? 'en' : 'ru'];
 		var ver = (L.isObject(board.release) ? board.release.version : '') || '';
 
-		ver = ver.replace(/^BE7000\s+/, '');
+		ver = ver.replace(/^(BE7000|Beam WRT)\s+/, '');
 
 		if (!document.getElementById('be7k-css'))
 			document.head.appendChild(E('style', { 'id': 'be7k-css' }, CSS));
 
-		return E('div', { 'class': 'be7k-card' }, [
-			E('div', { 'class': 'be7k-logo' }, [ icon('code') ]),
+		var card = E('div', { 'class': 'be7k-card' }, [
+			E('div', { 'class': 'be7k-logo', 'aria-hidden': 'true' }),
 			E('div', { 'class': 'be7k-head' }, [
-				E('a', { 'class': 'be7k-name', 'href': REPO, 'target': '_blank', 'rel': 'noopener' }, 'be7000-openwrt'),
+				E('a', { 'class': 'be7k-name', 'href': REPO, 'target': '_blank', 'rel': 'noopener' }, 'Beam WRT'),
 				E('div', { 'class': 'be7k-sub' }, tx.sub),
 				ver ? E('span', { 'class': 'be7k-ver' }, tx.version + ' ' + ver) : ''
 			]),
@@ -120,5 +123,9 @@ return baseclass.extend({
 				link(L.url('admin/system/credits'), 'heart', tx.credits)
 			])
 		]);
+
+		card.querySelector('.be7k-logo').innerHTML = LOGO;
+
+		return card;
 	}
 });
