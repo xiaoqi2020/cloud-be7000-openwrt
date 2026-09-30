@@ -23,7 +23,7 @@ START=99
 
 MARK=/etc/.be7000_secure_defaults
 SSID=OpenWrt-BE7000
-KEY=be7000openwrt
+KEY=12345678
 
 configured() {
 	local r enc
