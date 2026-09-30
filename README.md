@@ -1,116 +1,118 @@
 <img src="docs/img/beam-wrt-logo.svg" alt="" width="72" height="72" align="left">
-
-# Beam WRT
-
-Прошивка для Xiaomi BE7000 на базе OpenWrt.
+Beam WRT
+基于 OpenWrt 的小米 BE7000 固件。
 <br clear="left">
 
-[English](README.en.md) ·[中文](README.cn.md) ·  <a href="#поддержать-проект"><img alt="Поддержать проект" src="https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
+俄语版本 · <a href="#support-the-project"><img alt="支持项目" src="https://img.shields.io/badge/Support%20the%20project-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
 
-Beam WRT это свежий OpenWrt из main для Xiaomi BE7000 (плата RC06, процессор IPQ9554), ядро 6.18, без kexec. До версии 1.3.1 сборка называлась просто be7000-openwrt, по имени репозитория. Система грузится прямо с флеша, сток остаётся в соседнем слоте, вернуться на него можно в любой момент.
+Beam WRT 是为小米 BE7000（RC06 主板，IPQ9554 SoC）提供的最新 OpenWrt 主线固件，内核版本 6.18，无 kexec。在 1.3.1 版本之前，该构建仅被称为 be7000-openwrt（与仓库名相同）。系统直接从闪存启动，原厂固件保留在另一个分区，你可以随时回退到原厂固件。
 
-За основу взят порт kravasuper (ветка xiaomi_be7000, коммит 790d036a). К нему добавлены исправления в драйвер Ethernet, без которых на моей плате система не доходила до сети ([patches.md](docs/patches.md)), и набор служб, которые делают жизнь в двух слотах с заводским загрузчиком предсказуемой.
+它基于 kravasuper 的移植（分支 xiaomi_be7000，提交 790d036a）。在此基础上，我添加了以太网驱动的修复，没有这些修复，我主板上的系统根本无法连接到网络（patches.en.md），以及一系列使双分区和原厂引导加载程序变得可预测的服务。
 
-Текущая версия **1.3.1**. Образы лежат в [Releases](../../releases), суммы в sha256sums.txt. Как поставить, в разделе [Установка, обновление, откат](#установка-обновление-откат).
+当前版本是 1.3.1。镜像位于 Releases，校验和位于 sha256sums.txt。安装方法见 安装、更新、回滚 部分。
 
-## Содержание
+目录
+测试情况
 
-- [Что проверено](#что-проверено)
-- [Известные проблемы](#известные-проблемы)
-- [Установка, обновление, откат](#установка-обновление-откат)
-- [Что в образе](#что-в-образе)
-- [Документация](#документация)
-- [Тема оформления](#тема-оформления)
-- [Лицензия](#лицензия)
-- [Спасибо](#спасибо)
-- [Поддержать проект](#поддержать-проект)
+已知问题
 
-## Что проверено
+安装、更新、回滚
 
-Своя плата: RC06, IPQ9554 rev 1.1, стоковая прошивка 1.1.38, 1 ГБ памяти.
+镜像中包含的内容
 
-- Система загружается за 25 секунд и доходит до LuCI и SSH.
-- Гигабитный порт даёт около 940 Мбит/с в обе стороны по iperf3, ошибок CRC и потерь нет.
-- Порты на 2.5 Гбит/с: у одного владельца линк 2500 Мбит/с работал, через порт прошло 72 ГБ в одну сторону и 30 в другую без ошибок. На своей плате я проверял только 100 и 1000.
-- Wi-Fi 2.4 и 5 ГГц работают как Wi-Fi 6, калибровка из раздела ART подхватывается, правка TLMM6 и TLMM7 для 5 ГГц применена.
-- Wi-Fi 7 (EHT80) в режиме точки доступа работает, проверено ноутбуком: macOS показывает PHY Mode 802.11be, канал 36 на 80 МГц, iperf3 945 Мбит/с. Автовыбор канала на 5 ГГц тоже работает.
-- Со страной RU прошивка радиомодуля QCN9274 сама запрещает 802.11be (в `iw reg get` появляется NO-EHT), и EHT80 не поднимается. Это решение прошивки радио, а не драйвера.
-- PPPoE на живой линии, sysupgrade с переносом настроек и списка включённых служб, WireGuard и AmneziaWG (модуль и утилита awg собраны под это ядро).
+文档
 
-## Известные проблемы
+主题
 
-- **Ethernet на части плат до 1.3.0.** Порты поднимали линк, но роутер не принимал ни одного кадра. Причина оказалась в запросе ядра на регулятор l2 через RPM, в 1.3.0 это исправлено, подробности в [patches.md](docs/patches.md#приём-по-ethernet-на-части-плат). Если на вашей плате кабель всё ещё не работает, напишите в [issue #1](https://github.com/timofey-maykov/be7000-openwrt/issues/1) или в тему на 4PDA, заходить можно по Wi-Fi (сеть OpenWrt-BE7000, пароль be7000openwrt).
-- 5 ГГц по умолчанию одно радио на весь диапазон. Разделить его на два независимых, как 5G-1 и 5G-2 в стоке (36-64 и 149-165), можно на странице Сеть, Беспроводная сеть (блок Режим 5 ГГц вверху) или командой be7000-5g-split on, подробности в [patches.md](docs/patches.md#5-ггц-два-радио).
-- Места под /overlay 19.4 МБ, для чего-то крупного лучше вынести его на USB командой be7000-extroot.
-- Ядро использует мейнлайновый qcom-ppe, а не вендорный NSS, так что ускорение только на уровне PPE.
-- Порт отстаёт от main OpenWrt, при обновлении базы могут понадобиться правки патчей.
+许可证
 
-## Установка, обновление, откат
+致谢
 
-Пошагово в [docs/instruction](docs/instruction), в архиве релиза те же файлы:
+支持项目
 
-- [установка со стока](docs/instruction/1-install.txt)
-- [обновление](docs/instruction/2-update.txt), в том числе со страницы Система, Обновление сборки
-- [откат на сток и если что-то пошло не так](docs/instruction/3-rollback-and-problems.txt)
-- [возможности прошивки](docs/instruction/4-features.txt): пакеты, Wi-Fi, накопитель на USB, Docker
+测试情况
+我自己的主板：RC06，IPQ9554 rev 1.1，原厂固件 1.1.38，1 GB 内存。
 
-Загрузчик (0:APPSBL и 0:APPSBL_1) не трогайте ни при каких условиях, это единственное место, где плату можно убить насовсем.
+系统在 25 秒内启动并进入 LuCI 和 SSH。
 
-## Что в образе
+千兆端口使用 iperf3 双向测速约为 940 Mbit/s，无 CRC 错误，无丢包。
 
-OpenWrt SNAPSHOT r20260623-790d036a, ядро 6.18.36, архитектура aarch64_cortex-a73, пакеты apk. Фиды зафиксированы на ту же дату (feeds-pins.txt). Точный список пакетов в файле manifest, конфиг сборки в config.buildinfo.
+2.5 Gbit/s 端口：有一位用户的 2500 Mbit/s 链路成功运行，单向传输 72 GB，另一向 30 GB，无错误。在我自己的主板上，我只测试了 100 和 1000 兆。
 
-Из заметного: модуль qcom-ppe с ускорением PPE, firewall4 и nftables, PPPoE, dnsmasq-full, WireGuard и AmneziaWG, tc и ifb для шейпинга, драйверы ath11k (2.4 ГГц) и ath12k (5 ГГц) с прошивками, полный wpad, LuCI с https и русским языком, поддержка USB-накопителей, iperf3. Пакета kmod-ath11k-ahb в профиле порта не было, я его добавил, без него встроенный радиомодуль 2.4 ГГц остаётся без драйвера.
+Wi-Fi 2.4 和 5 GHz 以 Wi-Fi 6 模式工作，ART 分区的校准数据能被正确读取，5 GHz 的 TLMM6 和 TLMM7 修复已应用。
 
-Службы, которых нет в обычном OpenWrt, лежат в overlay-files:
+Wi-Fi 7 (EHT80) 在接入点模式下工作，使用笔记本电脑测试：macOS 显示 PHY Mode 802.11be，信道 36，频宽 80 MHz，iperf3 速率 945 Mbit/s。5 GHz 的自动信道选择也能正常工作。
 
-| Служба | Что делает |
-|--------|-----------|
-| be7000-bootconfirm | в конце загрузки подтверждает слот загрузчику и обнуляет счётчики попыток |
-| bigoverlay | при первой загрузке переносит /overlay на раздел настроек стока, см. [storage.md](docs/storage.md) |
-| be7000-wifi-defaults | при чистой установке включает оба радио с сетью OpenWrt-BE7000 |
-| be7000-feeds | приводит путь к фиду модулей ядра к хешу ядра из ROM |
-| be7000-romsync | после смены образа сбрасывает копию базы apk из overlay и переустанавливает пакеты пользователя |
-| be7000-bootlog | пишет журнал загрузки во флеш (crash_syslog), см. [debugging.md](docs/debugging.md) |
-| 79_be7000_stale_modules | в preinit откладывает модули ядра от прошлого образа, чтобы они не перекрывали модули из ROM |
+使用国家代码 RU 时，QCN9274 射频固件本身禁止 802.11be（在 iw reg get 中显示 NO-EHT），EHT80 无法启用。这是射频固件的决定，而非驱动的问题。
 
-Пакеты ставятся из коробки. Официальное зеркало собирает qualcommbe под cortex-a53, а эта сборка идёт под cortex-a73, поэтому каталога aarch64_cortex-a73 на зеркале нет и все общие фиды отдают 404. В образ прописан свой фид, собранный из того же дерева и подписанный ключом, которому образ уже доверяет. После `apk update` доступно 658 пакетов, включая nano, htop, tcpdump, strace, tmux, rsync, jq, modemmanager с драйверами USB-модемов, ksmbd и ttyd. Модули ядра лежат в отдельном фиде, потому что на зеркале они собраны под другое ядро.
+实际线路上的 PPPoE，sysupgrade 保留设置和已启用服务列表，WireGuard 和 AmneziaWG（模块和 awg 工具均针对此内核构建）。
 
-## Документация
+已知问题
+1.3.0 之前部分主板上的以太网问题。 端口能建立链路，但路由器收不到任何数据帧。原因是内核 RPM 对 l2 稳压器的请求，已在 1.3.0 中修复，详情见 patches.en.md。如果你的主板网线仍无法工作，请在 issue #1 或 4PDA 帖子中留言，你可以通过 Wi-Fi 进入（网络 OpenWrt-BE7000，密码 be7000openwrt）。
 
-- [patches.md](docs/patches.md): что и зачем добавлено к порту, патчи в работе
-- [bootloader.md](docs/bootloader.md): слоты флеша, как загрузчик выбирает слот, когда он поднимает сеть
-- [storage.md](docs/storage.md): место под настройки и пакеты, общий том со стоком, перенос на USB
-- [building.md](docs/building.md): как собирается прошивка в CI и как собрать самому
-- [debugging.md](docs/debugging.md): как искать причину без UART, журнал загрузки во флеше
-- [CHANGELOG.md](CHANGELOG.md): что менялось от версии к версии
+5 GHz 默认是整个频段一个射频。可以在“网络” -> “无线”顶部的 5 GHz 模式块中将其拆分为两个独立射频，就像原厂的 5G-1 和 5G-2（36-64 和 149-165），或者使用 be7000-5g-split 命令，详情见 patches.en.md。
 
-## Тема оформления
+/overlay 有 19.4 MB 空间；对于大型软件，最好使用 be7000-extroot 命令将其移动到 USB。
 
-Для LuCI сделал свою тему Nimbus: меню слева, быстрый поиск по страницам, светлая и тёмная схема, нормально выглядит на телефоне. Исходники, скриншоты и инструкция по установке лежат в папке [luci-theme-nimbus](luci-theme-nimbus), готовый пакет есть в релизах. Тема не привязана к BE7000 и ставится на любой OpenWrt с LuCI 23.05 и новее.
+内核使用主线 qcom-ppe 而非供应商的 NSS，因此加速仅在 PPE 层面。
 
-![Nimbus](luci-theme-nimbus/screenshots/overview-dark.png)
+该移植落后于 OpenWrt 主线，更新基础版本可能需要重做补丁。
 
-## Лицензия
+安装、更新、回滚
+分步指南见 docs/instruction，发布压缩包中包含相同的文件：
 
-Патчи в patches распространяются на условиях GPL-2.0-only, как ядро Linux. Скрипты и текст можно использовать как угодно. Образы собраны из исходников OpenWrt, порта kravasuper, этих патчей и пакетов из awg-feed, версии и конфиг указаны в config.buildinfo и feeds-pins.txt.
+从原厂固件安装
 
-## Спасибо
+更新，包括从“系统”页面中的“Обновление сборки”（固件更新）进行更新
 
-Полный список с ссылками открывается в LuCI на странице Система, Благодарности, и его же видно в приветствии по SSH. Отдельно zerc00l, который дал удалённый доступ к своему роутеру: на его плате нашлась причина мёртвого Ethernet. И kravasuper за сам порт, на котором всё стоит.
+回滚到原厂固件以及出错时的处理方法
 
-## Поддержать проект
+固件特性：软件包、Wi-Fi、USB 存储、Docker
 
-Сборка делается в свободное время: отладка на чужих платах, десятки тестовых образов, CI. Если она вам пригодилась, можно поддержать работу. Спасибо!
+在任何情况下都不要触碰引导加载程序（0:APPSBL 和 0:APPSBL_1），这是主板唯一可能永久变砖的地方。
+
+镜像中包含的内容
+OpenWrt SNAPSHOT r20260623-790d036a，内核 6.18.36，架构 aarch64_cortex-a73，apk 软件包。软件源固定在同一日期（feeds-pins.txt）。确切的软件包列表在 manifest 文件中，构建配置在 config.buildinfo 中。
+
+值得注意的项目：带 PPE 加速的 qcom-ppe 模块，firewall4 和 nftables，PPPoE，dnsmasq-full，WireGuard 和 AmneziaWG，用于流量整形的 tc 和 ifb，带固件的 ath11k（2.4 GHz）和 ath12k（5 GHz）驱动，完整版 wpad，带 https 和俄语的 LuCI，USB 存储支持，iperf3。kmod-ath11k-ahb 软件包不在移植的配置中，我添加了它；没有它，内置的 2.4 GHz 射频将没有驱动。
+
+不在常规 OpenWrt 中的服务位于 overlay-files 中：
+
+服务	功能
+be7000-bootconfirm	在启动结束时向引导加载程序确认分区并重置尝试计数器
+bigoverlay	首次启动时将 /overlay 移动到原厂设置分区，见 storage.en.md
+be7000-wifi-defaults	在全新安装时启用两个射频，并使用 OpenWrt-BE7000 网络
+be7000-feeds	使内核模块源路径与 ROM 中内核的哈希值保持一致
+be7000-romsync	镜像更改后重置 overlay 中 apk 数据库的副本，并重新安装用户的软件包
+be7000-bootlog	将启动日志写入闪存（crash_syslog），见 debugging.en.md
+79_be7000_stale_modules	在 preinit 阶段将上一个镜像的内核模块移开，以免它们覆盖 ROM 中的模块
+软件包开箱即用。官方镜像为 cortex-a53 构建 qualcommbe，而此构建针对 cortex-a73，因此镜像上没有 aarch64_cortex-a73 目录，所有公共软件源都会返回 404。镜像配置了自己的软件源，从同一代码树构建，并使用镜像已信任的密钥签名。执行 apk update 后有 658 个可用软件包，包括 nano、htop、tcpdump、strace、tmux、rsync、jq、带 USB 调制解调器驱动的 modemmanager、ksmbd 和 ttyd。内核模块位于单独的软件源中，因为镜像上的模块是针对不同内核构建的。
+
+文档
+patches.en.md：向移植中添加了什么以及为什么，进行中的补丁
+
+bootloader.en.md：闪存分区，引导加载程序如何选择分区，何时启动网络
+
+storage.en.md：设置和软件包的空间，与原厂共享的卷，移动到 USB
+
+building.en.md：固件如何在 CI 中构建以及如何自行构建
+
+debugging.en.md：如何在没有 UART 的情况下找到原因，闪存中的启动日志
+
+CHANGELOG.en.md：版本之间的变化
+
+主题
+我为 LuCI 制作了自己的主题 Nimbus：左侧菜单，跨页面快速搜索，浅色和深色方案，在手机上看起来不错。源代码、截图和安装说明在 luci-theme-nimbus 文件夹中，现成的软件包在 releases 中。该主题不绑定 BE7000，可安装在任何 LuCI 23.05 及更新版本的 OpenWrt 上。
+
+https://luci-theme-nimbus/screenshots/overview-dark.png
+
+许可证
+patches 中的补丁在 GPL-2.0-only 下分发，与 Linux 内核相同。脚本和文本可随意使用。镜像从 OpenWrt 源代码、kravasuper 移植、这些补丁和 awg-feed 中的软件包构建；版本和配置列在 config.buildinfo 和 feeds-pins.txt 中。
+
+致谢
+带链接的完整列表在 LuCI 的“系统” -> “鸣谢”页面，SSH 登录欢迎信息中也有相同列表。特别感谢 zerc00l，他提供了对他路由器的远程访问：以太网故障的原因是在他的主板上找到的。还要感谢 kravasuper 提供了这一切所依赖的移植。
+
+支持项目
+该构建是在业余时间完成的：在他人主板上调试、数十个测试镜像、CI。如果它对你有用，你可以支持这项工作。谢谢！
 
 <a href="https://boosty.to/itnitro"><img alt="Boosty" src="https://img.shields.io/badge/Boosty-itnitro-F15F2C?style=for-the-badge&logo=boosty&logoColor=white"></a>
-
-| Способ | Реквизиты |
-|------|-----------|
-| <img alt="USDT TON" src="https://img.shields.io/badge/USDT-TON-26A17B?style=for-the-badge&logo=tether&logoColor=white"> | `UQBZhwBuZCgQOtrgRGMu4PKiiOcf9dTKxRpapZt1oDn0m3yH` |
-| <img alt="USDT ETH ERC-20" src="https://img.shields.io/badge/USDT%20%2F%20ETH-ERC--20-627EEA?style=for-the-badge&logo=ethereum&logoColor=white"> | `0xeb05803030afB64C903C7BfB79d18957efD6bcCd` |
-| <img alt="SOL" src="https://img.shields.io/badge/SOL-Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white"> | `GcKxgUeSfKnsPL9iEaYKJArosfYKMtE4W5wVDdHrRVTu` |
-| <img alt="BTC" src="https://img.shields.io/badge/BTC-Bitcoin-F7931A?style=for-the-badge&logo=bitcoin&logoColor=white"> | `bc1qcyd3kaa3y2cv2yn90rsa628y3ptz56zs05z2jq` |
-| <img alt="WeChat" src="https://img.shields.io/badge/WeChat-itnitro-07C160?style=for-the-badge&logo=wechat&logoColor=white"> | `itnitro` |
-
-<img src="docs/img/wechat-itnitro-qr.jpg" alt="WeChat itnitro" width="200">
