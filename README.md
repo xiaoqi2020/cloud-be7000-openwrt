@@ -5,8 +5,7 @@
 Прошивка для Xiaomi BE7000 на базе OpenWrt.
 <br clear="left">
 
-[English](README.en.md) · [Русская версия](README.md) · 中文说明
-[English](README.en.md) · <a href="#поддержать-проект"><img alt="Поддержать проект" src="https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
+[English](README.en.md) ·[中文](README_cn.md) ·  <a href="#поддержать-проект"><img alt="Поддержать проект" src="https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
 
 Beam WRT это свежий OpenWrt из main для Xiaomi BE7000 (плата RC06, процессор IPQ9554), ядро 6.18, без kexec. До версии 1.3.1 сборка называлась просто be7000-openwrt, по имени репозитория. Система грузится прямо с флеша, сток остаётся в соседнем слоте, вернуться на него можно в любой момент.
 
