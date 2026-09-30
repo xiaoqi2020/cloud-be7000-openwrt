@@ -3,7 +3,7 @@ Beam WRT
 基于 OpenWrt 的小米 BE7000 固件。
 <br clear="left">
 
-俄语版本 · <a href="#support-the-project"><img alt="支持项目" src="https://img.shields.io/badge/Support%20the%20project-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
+<a href="#support-the-project"><img alt="支持项目" src="https://img.shields.io/badge/Support%20the%20project-Boosty%20%C2%B7%20crypto-F15F2C?style=flat-square"></a>
 
 Beam WRT 是为小米 BE7000（RC06 主板，IPQ9554 SoC）提供的最新 OpenWrt 主线固件，内核版本 6.18，无 kexec。在 1.3.1 版本之前，该构建仅被称为 be7000-openwrt（与仓库名相同）。系统直接从闪存启动，原厂固件保留在另一个分区，你可以随时回退到原厂固件。
 
