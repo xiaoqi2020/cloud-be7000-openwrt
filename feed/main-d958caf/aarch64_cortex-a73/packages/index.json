@@ -33,6 +33,7 @@
     "conntrack": "1.4.8-r1",
     "containerd": "2.2.5-r1",
     "coreutils": "9.11-r1",
+    "coreutils-sleep": "9.11-r1",
     "coreutils-sort": "9.11-r1",
     "cryptsetup": "2.8.8-r1",
     "curl": "8.22.0-r1",
