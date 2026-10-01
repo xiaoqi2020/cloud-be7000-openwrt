@@ -1,13 +1,13 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>BE7000 OpenWrt package feed</title>
-<h1>BE7000 OpenWrt package feed</h1>
-<p>Packages built for <code>aarch64_cortex-a73</code>, the CPU type this firmware uses. The official OpenWrt mirror only carries <code>aarch64_cortex-a53</code> for this target, so its generic feeds do not resolve here.</p>
-<p>Add to <code>/etc/apk/repositories.d/customfeeds.list</code>:</p>
+<title>BE7000 OpenWrt 软件包源</title>
+<h1>BE7000 OpenWrt 软件包源</h1>
+<p>为 <code>aarch64_cortex-a73</code>（此固件使用的 CPU 类型）构建的软件包。官方 OpenWrt 镜像源对此目标仅提供 <code>aarch64_cortex-a53</code>，因此其通用软件源在此无法解析。</p>
+<p>添加到 <code>/etc/apk/repositories.d/customfeeds.list</code>：</p>
 <pre>https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/base/packages.adb
 https://xiaoqi2020.github.io/cloud-be7000-openwrt/feed/aarch64_cortex-a73/packages/packages.adb
 https://xiaoqi2020.github.io/cloud-be7000-openwrt/feed/aarch64_cortex-a73/luci/packages.adb
 https://xiaoqi2020.github.io/cloud-be7000-openwrt/feed/aarch64_cortex-a73/awg/packages.adb
 https://xiaoqi2020.github.io/cloud-be7000-openwrt/feed/targets/qualcommbe/ipq95xx/packages/packages.adb</pre>
-<p>The last line carries the kernel modules. They are built against the kernel this firmware ships (6.18.36); the ones on the official mirror are built against a newer one and will not satisfy the dependency.</p>
-<p>The indexes are signed with the same key the firmware trusts, so no extra setup is needed.</p>
+<p>最后一行包含内核模块。它们针对此固件所搭载的内核（6.18.36）构建；官方镜像源上的模块针对更新的内核构建，将无法满足依赖关系。</p>
+<p>这些索引使用固件所信任的同一密钥签名，因此无需额外设置。</p>
