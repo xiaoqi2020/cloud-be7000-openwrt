@@ -1,27 +1,5 @@
 name: Build
 
-# Everything the project ships comes out of this one workflow, so nothing has
-# to be built on a laptop any more:
-#
-#   - on a manual run it builds every package in config.buildinfo and pushes
-#     the signed feed straight to the gh-pages branch;
-#   - on a v* tag it does the same and also builds the firmware, packs the
-#     archive with the installer and the instruction, and publishes a GitHub
-#     Release with all of it attached.
-#
-# Nothing goes through Actions artifacts: the feed lands in git, the images
-# land in the release, and that is all the storage this uses.
-#
-# Kernel modules are published under a directory named after the kernel's
-# config hash (vermagic). apk refuses a module built for a different hash, and
-# every image bakes its own hash into /etc/apk/repositories.d/customfeeds.list,
-# so an old image keeps finding modules that fit it after the kernel config
-# moves on. The unversioned targets/.../packages directory is the feed of the
-# 1.2.x images and is never touched here.
-#
-# The apk indexes are signed with the same key the images trust, taken from
-# the APK_SIGNING_KEY secret (the private-key.pem of the original tree).
-
 on:
   workflow_dispatch:
     inputs:
@@ -37,7 +15,6 @@ env:
   OWRT_BRANCH: xiaomi_be7000
   OWRT_COMMIT: 790d036a
   VERSION_STRING: r20260623-790d036a
-  # The toolchain cache takes ~5 GB of the 10 GB Actions cache quota.
   CCACHE_MAXSIZE: 2G
   ARCH: aarch64_cortex-a73
   TARGET: qualcommbe/ipq95xx
@@ -46,10 +23,6 @@ env:
 permissions:
   contents: write
 
-# Caches saved by a tag run are visible to that tag only, so every debug-*
-# tag used to start with an empty ccache and rebuild the kernel from scratch.
-# A warm run on main saves one every ref can restore; it publishes nothing,
-# so it does not have to queue behind feed and release runs.
 concurrency:
   group: build-${{ inputs.warm && 'warm' || 'publish' }}
   cancel-in-progress: false
@@ -64,8 +37,6 @@ jobs:
         with:
           path: repo
 
-      # The OpenWrt tree plus a toolchain does not fit next to the preinstalled
-      # SDKs the runner image ships.
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
@@ -85,26 +56,22 @@ jobs:
           git clone --branch "$OWRT_BRANCH" --single-branch "$OWRT_REPO" owrt
           cd owrt
           git checkout "$OWRT_COMMIT"
-          # base-files wants a version string and the checkout is detached
           echo "$VERSION_STRING" > version
 
       - name: Apply patches and overlay
         run: |
           cd owrt
           cp ../repo/patches/*.patch target/linux/qualcommbe/patches-6.18/
-          # ath12k lives in the mac80211 package, not in the kernel tree
           cp ../repo/patches/mac80211-ath12k/*.patch package/kernel/mac80211/patches/ath12k/
           for p in ../repo/patches/tree/*.patch; do
             patch -p1 < "$p"
           done
           mkdir -p files
           cp -a ../repo/overlay-files/. files/
-          # a debug-* tag ships extra diagnostics and experiments on top
           case "${{ github.ref_name }}" in
             debug-*) cp -a ../repo/overlay-files-debug/. files/; echo "debug overlay added" ;;
           esac
           cp -a ../repo/awg-feed .
-          # the LuCI theme lives in this repo, not in any feed
           cp -a ../repo/luci-theme-nimbus package/
 
       - name: Signing key
@@ -124,9 +91,6 @@ jobs:
       - name: Pin and install feeds
         run: |
           cd owrt
-          # The port's feeds.conf.default has bare URLs, so the pin is appended
-          # rather than replaced; a line that already carries ^rev or ;branch
-          # is cut back to the URL first.
           while read -r name rev _; do
             [ -n "$name" ] || continue
             sed -i -E "s|^(src-git(-full)? $name [^ ^;]+).*$|\1^$rev|" feeds.conf.default
@@ -146,18 +110,11 @@ jobs:
           cp ../repo/config.buildinfo .config
           echo "CONFIG_SIGNED_PACKAGES=y" >> .config
           echo "CONFIG_SIGNATURE_CHECK=y" >> .config
-          # compiler cache between runs, see the ccache step below. CCACHE
-          # only exists under DEVEL ("Use ccache" if DEVEL); without it
-          # defconfig silently drops the option and nothing is ever cached.
           echo "CONFIG_DEVEL=y" >> .config
           echo "CONFIG_CCACHE=y" >> .config
           case "${{ github.ref_name }}:${{ inputs.warm }}" in
             debug-*|*:true) echo "CONFIG_PACKAGE_tcpdump-mini=y" >> .config ;;
           esac
-          # the version LuCI, /etc/openwrt_release and the banner show:
-          # "Beam WRT 1.3.1 r20260623-790d036a" instead of "OpenWrt SNAPSHOT".
-          # Image file names stay openwrt-... (tree 009), the installer and
-          # be7000-update look the assets up by name.
           TAG="${{ github.ref_name }}"
           case "$TAG" in
             v*) REL="${TAG#v}" ;;
@@ -183,13 +140,6 @@ jobs:
           fi
           make defconfig
           grep -E '^CONFIG_VERSION_NUMBER|^# CONFIG_VERSION_FILENAMES' .config || true
-          # A debug-* build only has to produce the image: nothing it builds
-          # is published to the feed, and packages built as modules (=m) are
-          # never part of the image. Dropping them skips most of "Build
-          # everything". Anything the image needs is =y and stays.
-          # kmod-* stay =m: selected kmods feed the kernel config, so dropping
-          # them would change the kernel hash (vermagic) and the debug image
-          # could no longer install modules from the release feed.
           case "${{ github.ref_name }}:${{ inputs.warm }}" in
             debug-*|*:true)
               sed -i '/^CONFIG_PACKAGE_kmod-/!s/^\(CONFIG_PACKAGE_[^=]*\)=m$/# \1 is not set/' .config
@@ -199,9 +149,6 @@ jobs:
           echo "packages as modules: $(grep -c '=m$' .config)"
           grep -q '^CONFIG_CCACHE=y' .config || { echo "::error::CONFIG_CCACHE did not survive defconfig"; exit 1; }
 
-      # The toolchain and the kernel do not change between runs while the port
-      # commit is pinned, so keep them. This is the difference between three
-      # hours and forty minutes.
       - name: Cache toolchain and sources
         uses: actions/cache@v4
         with:
@@ -215,10 +162,6 @@ jobs:
           restore-keys: |
             owrt-${{ env.OWRT_COMMIT }}-
 
-      # The toolchain cache above only skips building the compiler; this one
-      # makes the compiler skip work it has already done. The key is unique
-      # per run so every run saves its own snapshot, and restore-keys pick
-      # the most recent one. Roughly halves the kernel and world steps.
       - name: Cache compiler output
         uses: actions/cache@v4
         with:
@@ -236,8 +179,6 @@ jobs:
           make -j"$(nproc)" tools/install toolchain/install || make -j1 V=s tools/install toolchain/install
           make -j"$(nproc)" target/linux/compile || make -j1 V=s target/linux/compile
 
-      # The kernel hash is known now, so the image can be told where its own
-      # modules will live before the rootfs is assembled.
       - name: Point the image at its kernel-module feed
         run: |
           cd owrt
@@ -246,7 +187,6 @@ jobs:
           f=files/etc/apk/repositories.d/customfeeds.list
           sed -i "s|feed/targets/$TARGET/packages/packages.adb|feed/targets/$TARGET/$VERMAGIC/packages/packages.adb|" "$f"
           grep "feed/targets" "$f"
-          # what be7000-update and the LuCI page report as the installed version
           TAG="${{ github.ref_name }}"
           case "$TAG" in v*) VER="${TAG#v}"; VER="${VER%%-*}" ;; debug-*) VER="$TAG" ;; *) VER=dev ;; esac
           {
@@ -272,7 +212,6 @@ jobs:
           cd owrt
           img=bin/targets/$TARGET/$DEVICE-squashfs-factory.ubi
           ls -la "$img" bin/targets/$TARGET/$DEVICE-squashfs-sysupgrade.bin
-          # a stray personal file or a debug service would ship to everyone
           ! grep -rlE "hfdbg|HFDBG|192\.168\.11\." build_dir/target-*/root-qualcommbe/etc || {
             echo "personal or debug files in the rootfs" >&2; exit 1; }
           case "${{ github.ref_name }}" in
@@ -323,8 +262,7 @@ jobs:
           sha256sum "$DEVICE-squashfs-factory.ubi" "$DEVICE-squashfs-sysupgrade.bin" > sha256sums.txt
           cp "$DEVICE-squashfs-factory.ubi" ../repo/scripts/install-from-stock.sh \
              ../repo/scripts/rollback-to-stock.sh ../repo/docs/instruction/*.txt sha256sums.txt zip/
-          # the index's first line carries the version
-          sed -i "1s/версия [0-9][0-9.]*/версия $VER/" zip/instruction.txt
+          sed -i "1s/版本 [0-9][0-9.]*/版本 $VER/" zip/instruction.txt
           sed -i "1s/version [0-9][0-9.]*/version $VER/" zip/instruction-en.txt
           (cd zip && zip -q -X "../$ZIP" ./*)
           sha256sum "$ZIP"
@@ -346,14 +284,12 @@ jobs:
           fi
           assets=("$ZIP" "$DEVICE-squashfs-factory.ubi" \
                   "$DEVICE-squashfs-sysupgrade.bin" "$DEVICE.manifest" sha256sums.txt)
-          # A release for this tag may already exist (created by hand, or a
-          # rerun): then just replace its files rather than fail at the end.
           if gh release view "${{ github.ref_name }}" -R "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "${{ github.ref_name }}" -R "${{ github.repository }}" --clobber "${assets[@]}"
           else
             case "${{ github.ref_name }}" in
               debug-*) gh release create "${{ github.ref_name }}" -R "${{ github.repository }}" --prerelease \
-                         --title "Beam WRT, отладочная сборка ${{ github.ref_name }}" "${args[@]}" "${assets[@]}" ;;
+                         --title "Beam WRT 构建 ${{ github.ref_name }}" "${args[@]}" "${assets[@]}" ;;
               *) gh release create "${{ github.ref_name }}" -R "${{ github.repository }}" --latest \
                    --title "Beam WRT $VER" "${args[@]}" "${assets[@]}" ;;
             esac
