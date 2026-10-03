@@ -3,7 +3,8 @@ name: Auto Sync Upstream Tags
 on:
   schedule:
     - cron: '*/30 * * * *'  # 每 30 分钟运行一次
-  workflow_dispatch:
+  workflow_dispatch:        # 支持手动触发
+
 jobs:
   sync-tags:
     runs-on: ubuntu-latest
@@ -12,33 +13,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 拉取所有标签
+          fetch-depth: 0  # 拉取所有历史和标签
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
-          github config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Add upstream remote
         run: |
-          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git 2>/dev/null || \
-          echo "upstream remote already exists"
+          # 添加上游仓库（如果已存在则忽略报错）
+          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git 2>/dev/null || true
 
       - name: Fetch upstream tags
         run: |
+          # 拉取上游最新标签
           git fetch upstream --tags --prune
 
-      - name: Get latest v-tag
-        id: latest-tag
+      - name: Sync new tags
         run: |
-          LATEST_TAG=$(git tag -l 'v*' --Actions/gha --sort=-v:refname | head -n 1)
+          # 获取上游最新的 v 开头标签
+          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+
           if [ -z "$LATEST_TAG" ]; then
-            echo "no_tag=true" >> $GITHUB_OUTPUT
-          else
-            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "未找到 v 开头的标签，跳过。"
+            exit 0
           fi
 
-      - name: Push new tag to origin
-        if: steps.latest-tag.outputs.tag != ''
-        run: |
-          git push origin ${{ steps.latest-tag.outputs.tag }}
+          echo "检测到上游最新标签：$LATEST_TAG"
+
+          # 检查本地是否已有该标签
+          if git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
+            echo "标签 $LATEST_TAG 已存在，无需同步。"
+            exit 0
+          fi
+
+          # 推送新标签到当前仓库
+          echo "正在推送新标签 $LATEST_TAG ..."
+          git push origin "$LATEST_TAG"
+          echo "✅ 同步成功！"
