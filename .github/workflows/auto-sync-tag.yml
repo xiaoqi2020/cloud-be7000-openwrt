@@ -2,8 +2,8 @@ name: Auto Sync Upstream Tags
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 每 30 分钟运行一次
-  workflow_dispatch:        # 支持手动触发
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
   sync-tags:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 拉取所有历史和标签
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
@@ -22,20 +22,18 @@ jobs:
 
       - name: Add upstream remote
         run: |
-          # 添加上游仓库（如果已存在则忽略报错）
           git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git 2>/dev/null || true
-          # 打印远程地址确认
           git remote -v
 
       - name: Fetch upstream tags
         run: |
-          # 拉取上游所有标签
-          git fetch upstream --tags --prune
+          # 强制拉取上游所有标签，覆盖本地冲突的标签
+          git fetch upstream --tags --prune --force
 
       - name: Sync latest tag
         run: |
-          # 获取上游所有标签，按版本排序取最新
-          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n 1)
+          # 获取上游所有标签，按创建时间排序取最新
+          LATEST_TAG=$(git tag -l --sort=creatordate | tail -n 1)
 
           if [ -z "$LATEST_TAG" ]; then
             echo "上游没有发现任何标签，跳过。"
@@ -44,13 +42,12 @@ jobs:
 
           echo "上游最新标签：$LATEST_TAG"
 
-          # 检查本地是否已有该标签
+          # 检查本地是否已有
           if git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
-            echo "标签 $LATEST_TAG 已存在，无需同步。"
+            echo "标签 $LATEST_TAG 已存在，跳过推送。"
             exit 0
           fi
 
-          # 推送新标签到当前仓库
-          echo "正在推送新标签 $LATEST_TAG ..."
+          # 推送新标签
           git push origin "$LATEST_TAG"
           echo "✅ 已同步标签：$LATEST_TAG"
