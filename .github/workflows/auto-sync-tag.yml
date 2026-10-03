@@ -1,0 +1,44 @@
+name: Auto Sync Upstream Tags
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # 每 30 分钟运行一次
+  workflow_dispatch:
+jobs:
+  sync-tags:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 拉取所有标签
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          github config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git 2>/dev/null || \
+          echo "upstream remote already exists"
+
+      - name: Fetch upstream tags
+        run: |
+          git fetch upstream --tags --prune
+
+      - name: Get latest v-tag
+        id: latest-tag
+        run: |
+          LATEST_TAG=$(git tag -l 'v*' --Actions/gha --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "no_tag=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push new tag to origin
+        if: steps.latest-tag.outputs.tag != ''
+        run: |
+          git push origin ${{ steps.latest-tag.outputs.tag }}
