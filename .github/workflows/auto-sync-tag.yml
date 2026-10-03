@@ -1,4 +1,4 @@
-name: Auto Sync Upstream Tags
+name: Auto Sync Upstream Tags & Release
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync-tags:
+  sync-tags-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,12 +27,12 @@ jobs:
 
       - name: Fetch upstream tags
         run: |
-          # 强制拉取上游所有标签，覆盖本地冲突的标签
+          # 强制拉取上游所有标签
           git fetch upstream --tags --prune --force
 
-      - name: Sync latest tag
+      - name: Sync latest tag & Create Release
         run: |
-          # 获取上游所有标签，按创建时间排序取最新
+          # 获取上游最新标签（按创建时间排序）
           LATEST_TAG=$(git tag -l --sort=creatordate | tail -n 1)
 
           if [ -z "$LATEST_TAG" ]; then
@@ -42,12 +42,31 @@ jobs:
 
           echo "上游最新标签：$LATEST_TAG"
 
-          # 检查本地是否已有
+          # 检查本地是否已有该标签
           if git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
-            echo "标签 $LATEST_TAG 已存在，跳过推送。"
+            echo "标签 $LATEST_TAG 已存在。"
+          else
+            # 推送新标签到当前仓库
+            git push origin "$LATEST_TAG"
+            echo "✅ 已推送标签：$LATEST_TAG"
+          fi
+
+          # 检查是否已存在同名 Release
+          RELEASE_EXISTS=$(gh release view "$LATEST_TAG" --json tagName --jq '.tagName' 2>/dev/null || echo "")
+
+          if [ "$RELEASE_EXISTS" == "$LATEST_TAG" ]; then
+            echo "Release $LATEST_TAG 已存在，跳过创建。"
             exit 0
           fi
 
-          # 推送新标签
-          git push origin "$LATEST_TAG"
-          echo "✅ 已同步标签：$LATEST_TAG"
+          # 创建新 Release
+          echo "正在创建 Release: $LATEST_TAG ..."
+          gh release create "$LATEST_TAG" \
+            --title "Release $LATEST_TAG" \
+            --notes "Auto-synced from upstream: timofey-maykov/be7000-openwrt" \
+            --target main \
+            --verify-tag
+
+          echo "✅ 已创建 Release: $LATEST_TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
