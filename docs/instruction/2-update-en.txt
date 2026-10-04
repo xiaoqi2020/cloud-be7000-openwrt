@@ -1,15 +1,16 @@
 Updating an installed firmware
 
 
-UPDATING TO 1.4.0 FROM 1.x VERSIONS
+UPDATING TO 1.4 FROM 1.x VERSIONS
 
-Version 1.4.0 is built on a new OpenWrt base with a new kernel. It updates as usual and keeps your settings.
+The 1.4 versions are built on a new OpenWrt base with a new kernel. They update as usual and keep your settings.
 
 One thing is worth knowing in advance. Packages you installed yourself are installed again after the update, this time for the new kernel. The router does it by itself, but it needs internet for that.
 
 Which versions can update
 
-From 1.3.0, 1.3.1 and from 1.2.3 up to 1.2.7 you can update right away.
+From 1.4.x, 1.3.0, 1.3.1 and from 1.2.3 up to 1.2.7 you can update right away.
+If your /overlay is on a USB disk, install 1.4.4 or newer right away. After the update to 1.4.3 the router stayed on the internal partition until you restarted it by hand with reboot.
 From 1.0 up to 1.2.2, first read "If your version is older than 1.2.3" at the end of this file. There is one command to run before the update.
 
 Before the update
@@ -26,7 +27,7 @@ The list holds the firmware's own packages too, yours are among them. Copy it so
 
 How to update
 
-The easiest way is the System, Build update page. It finds 1.4.0 and shows what is new. With one button it downloads the image, checks it and updates the router keeping the settings.
+The easiest way is the System, Build update page. It finds the new version and shows what is new. With one button it downloads the image, checks it and updates the router keeping the settings.
 
 The same from the console.
 
@@ -49,7 +50,7 @@ Stock settings are not imported on an update. That only happens on the first ins
 
 What to check afterwards
 
-Status, Overview should show version 1.4.0 and working internet.
+Status, Overview should show the version you installed and working internet.
 Network, Wireless should show both networks. With country code RU there will be a warning that Wi-Fi 7 is off. The button next to it sets US for 5 GHz and Wi-Fi 7 works again.
 System, Software should list your packages again. If something is missing, check your list and install it by hand.
 
@@ -66,7 +67,7 @@ Regular update
 
 From the web interface
 
-Since 1.2.6 there is a System, Build update page. It checks GitHub for a newer version and shows what is in it. With one button it downloads the image, checks the checksum and updates the router keeping the settings. From the console be7000-update check and be7000-update apply do the same. Before 1.4.0 this menu entry may show in Russian as "Обновление сборки".
+Since 1.2.6 there is a System, Build update page. It checks GitHub for a newer version and shows what is in it. With one button it downloads the image, checks the checksum and updates the router keeping the settings. From the console be7000-update check and be7000-update apply do the same. Before 1.4.0 this menu entry may show in Russian as "Обновление сборки". The router tells you about a new release by itself. It checks GitHub once a day and shows a button in the top bar and a block on Status, Overview. The check can be turned off on the same page.
 
 If you do not have this page yet, install it from the feed with apk add luci-app-be7000-update. You need 1.2.5 or newer for that. The firmware version is written in /etc/be7000-release. Without this file the firmware counts as self-built and does not offer itself updates.
 

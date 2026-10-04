@@ -2,7 +2,7 @@
 
 [Русский](features.md) · [中文](features.zh.md)
 
-Beam WRT is OpenWrt-based firmware for the Xiaomi BE7000 router. This page covers what it has, what is new in version 1.4.0 and how it differs from the factory firmware and other builds.
+Beam WRT is OpenWrt-based firmware for the Xiaomi BE7000 router. This page covers what it has, what is new in version 1.4 and how it differs from the factory firmware and other builds.
 
 ## How Beam WRT differs from other firmware
 
@@ -12,7 +12,7 @@ Beam WRT is OpenWrt-based firmware for the Xiaomi BE7000 router. This page cover
 
 **Its own package feed.** More than 600 packages install with apk right on the router. Among them are modem drivers, Docker, tcpdump, htop and much more. AmneziaWG is already built into the firmware. hybrid-failover lives in a separate feed and updates itself there as soon as a new version is out. It installs with one button on the Services, Add-ons page, which also explains what it is and why.
 
-**One-click updates.** The System, Build update page finds a new version, checks its checksum and installs it keeping your settings. Packages you installed yourself come back automatically after the update.
+**One-click updates.** The System, Build update page finds a new version, checks its checksum and installs it keeping your settings. Packages you installed yourself come back automatically after the update. The router tells you about a new release by itself, with a button in the top bar and a block on Status, Overview.
 
 **The factory firmware is always close.** Beam WRT takes one slot in flash, the factory firmware stays in the other. You can go back to it with a button. If a new version does not boot after the install, the router goes back to the factory firmware by itself.
 
@@ -20,7 +20,9 @@ Beam WRT is OpenWrt-based firmware for the Xiaomi BE7000 router. This page cover
 
 **Docs in Russian, English and Chinese.** Installing, updating, going back, recipes for common tasks and measurements with a method you can repeat yourself.
 
-## New in 1.4.0
+## New in 1.4
+
+The main part came in 1.4.0, and 1.4.1, 1.4.2, 1.4.3 and 1.4.4 added and fixed many smaller things, the full list is in [CHANGELOG.en.md](../CHANGELOG.en.md). The notable ones after 1.4.0 are the Add-ons page with Zapret Manager, the new-version notice, the fixed firewall for Docker, the State trigger for the LEDs and a more reliable update with a USB disk.
 
 ### A new base
 
@@ -56,7 +58,7 @@ The IPQ9554 has a separate network block, the PPE. It can route and do NAT by it
 
 ![Where download packets go with offload on](img/ppe-packet-path-en.svg)
 
-The feature is experimental and off by default. It is turned on at Network, Hardware offload, which also describes what is offloaded and what it does not mix with.
+The feature is tested and works, and it is off by default. It is turned on at Network, Hardware offload, which also describes what is offloaded and what it does not mix with.
 
 ### Fixes
 
@@ -72,7 +74,8 @@ The full list of changes is in [CHANGELOG.en.md](../CHANGELOG.en.md).
 ## What else the firmware has
 
 - Moving settings and packages to a USB disk with one button on System, Storage.
-- Docker with ready-made container sets (AdGuard Home, Home Assistant, Portainer and more) on Services, "Docker: stacks".
+- Docker with ready-made container sets (AdGuard Home, Home Assistant, Portainer and more) on Services, "Docker: stacks". The firewall for the containers is set up by itself, including the networks of compose stacks, and Docker works together with Hybrid Failover.
+- LEDs: the LED Configuration page has a State (Beam WRT) trigger, any LED can show a process, an address or the result of a command. The amber network LED shows Wi-Fi 2.4 GHz traffic.
 - The Nimbus theme.
 - The interface in Russian, English and Chinese.
 - UPnP, off by default.
@@ -83,6 +86,6 @@ The full list of changes is in [CHANGELOG.en.md](../CHANGELOG.en.md).
 Two things need testing on live routers, and there is no way to run such tests yet.
 
 - **Settings import from the factory firmware** was tested on test data but has not run on a real factory firmware yet. You can safely see what the firmware finds with `be7000-stock-import preview`, it changes nothing.
-- **The gain from hardware offload on a wired connection.** For Wi-Fi it is small, because packets still pass through the CPU. On a wired connection the difference should be noticeable, but there are no measurements yet.
+- **Measuring the gain from hardware offload on a wired connection.** The offload itself is tested and works. For Wi-Fi the gain is small, because packets still pass through the CPU. There are no measurements on a wired connection yet.
 
 If you can help, post the results in the 4PDA topic or in issues. How to measure is described in [benchmarks.en.md](benchmarks.en.md).

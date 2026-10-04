@@ -1,5 +1,6 @@
 'use strict';
 'require baseclass';
+'require rpc';
 'require ui';
 
 const ICONS = {
@@ -17,6 +18,7 @@ const ICONS = {
 	auto: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
 	light: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
 	dark: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+	update: '<path d="M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5"/>',
 	enter: '<path d="M20 5v7a3 3 0 0 1-3 3H5M9 11l-4 4 4 4"/>'
 };
 
@@ -24,17 +26,20 @@ const STRINGS = {
 	ru: {
 		search: 'Поиск', placeholder: 'Найти страницу или настройку...', empty: 'Ничего не найдено',
 		auto: 'Авто', light: 'Светлая', dark: 'Тёмная', theme: 'Оформление', logout: 'Выйти',
-		go: 'открыть', move: 'выбор', close: 'закрыть'
+		go: 'открыть', move: 'выбор', close: 'закрыть',
+		newVersion: 'Вышла версия %s'
 	},
 	en: {
 		search: 'Search', placeholder: 'Jump to a page or setting...', empty: 'Nothing found',
 		auto: 'Auto', light: 'Light', dark: 'Dark', theme: 'Appearance', logout: 'Log out',
-		go: 'open', move: 'navigate', close: 'close'
+		go: 'open', move: 'navigate', close: 'close',
+		newVersion: 'Version %s is out'
 	},
 	zh: {
 		search: '搜索', placeholder: '查找页面或设置...', empty: '未找到',
 		auto: '自动', light: '浅色', dark: '深色', theme: '外观', logout: '退出',
-		go: '打开', move: '选择', close: '关闭'
+		go: '打开', move: '选择', close: '关闭',
+		newVersion: '新版本 %s 已发布'
 	}
 };
 
@@ -109,6 +114,49 @@ return baseclass.extend({
 		}
 
 		this.renderFoot();
+		this.checkUpdate();
+	},
+
+	// A small button in the top bar when the daily check of be7000-update
+	// found a newer build. The answer is what the router already knows, so
+	// this costs one local call, kept for ten minutes in the tab. Where
+	// there is no be7000-update the call fails and nothing shows.
+	checkUpdate() {
+		const KEY = 'nb-update-notice';
+		let cached = null;
+
+		try {
+			cached = JSON.parse(window.sessionStorage.getItem(KEY));
+		}
+		catch (e) {}
+
+		const show = (version) => {
+			const right = document.querySelector('.nb-topbar-right');
+
+			if (!version || !right || right.querySelector('.nb-update'))
+				return;
+
+			right.insertBefore(E('a', {
+				'class': 'nb-update',
+				'href': L.url('admin/system/be7000-update'),
+				'title': this.t.newVersion.replace('%s', version)
+			}, [ icon('update'), E('span', {}, [ this.t.newVersion.replace('%s', version) ]) ]), right.firstChild);
+		};
+
+		if (cached && Date.now() - cached.at < 600000)
+			return show(cached.version);
+
+		rpc.declare({ object: 'be7000-update', method: 'status' })().then((res) => {
+			const latest = res && res.latest;
+			const version = latest && (latest.available === 1 || latest.available === true) ? latest.latest : '';
+
+			try {
+				window.sessionStorage.setItem(KEY, JSON.stringify({ at: Date.now(), version: version }));
+			}
+			catch (e) {}
+
+			show(version);
+		}).catch(() => {});
 	},
 
 	renderFoot() {

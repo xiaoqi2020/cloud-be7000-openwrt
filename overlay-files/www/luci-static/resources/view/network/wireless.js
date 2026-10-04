@@ -121,10 +121,27 @@ function render_network_badge(radioNet) {
 		radioNet.getSignal(), radioNet.getNoise(), false, radioNet.getMode());
 }
 
+function wifi_uses_radio(radioNet, radioName) {
+	const devices = L.toArray(radioNet.get('device'));
+	return devices.indexOf(radioName) > -1 || radioNet.getWifiDeviceName() == radioName;
+}
+
+function active_encryption(radioNet) {
+	return radioNet.get('encryption') == 'sae-compat'
+		? 'WPA2/WPA3 SAE (MLO)'
+		: radioNet.getActiveEncryption();
+}
+
 function render_radio_status(radioDev, wifiNets) {
 	const name = radioDev.getI18n().replace(/ Wireless Controller .+$/, '');
 	const node = E('div', [ E('big', {}, E('strong', {}, name)), E('div') ]);
-	let channel, frequency, bitrate;
+	const info = radioDev.ubus('dev', 'iwinfo') || {};
+	let channel = info.channel || radioDev.get('channel');
+	let frequency = info.frequency > 0 ? '%.03f'.format(info.frequency / 1000) : null;
+	let bitrate = info.bitrate > 0 ? info.bitrate / 1000 : null;
+
+	if (!frequency && channel && !isNaN(+channel) && radioDev.get('band') == '5g')
+		frequency = '%.03f'.format((5000 + 5 * channel) / 1000);
 
 	wifiNets.forEach(wifiNet => {
 		channel   = channel   ?? wifiNet.getChannel();
@@ -165,7 +182,7 @@ function render_network_status(radioNet) {
 		is_mesh ? _('Mesh ID') : _('SSID'), (is_mesh ? radioNet.getMeshID() : radioNet.getSSID()) ?? '?',
 		_('Mode'),       mode,
 		_('BSSID'),      (!changecount && is_assoc) ? bssid : null,
-		_('Encryption'), (!changecount && is_assoc) ? radioNet.getActiveEncryption() ?? _('None') : null,
+		_('Encryption'), (!changecount && is_assoc) ? active_encryption(radioNet) ?? _('None') : null,
 		'',            status_text
 	], [ ' | ', E('br') ]);
 }
@@ -191,7 +208,7 @@ function render_modal_status(node, radioNet) {
 		_('Mode'),       mode,
 		_('SSID'),       radioNet.getSSID() ?? '?',
 		_('BSSID'),      is_assoc ? bssid : null,
-		_('Encryption'), is_assoc ? radioNet.getActiveEncryption() ?? _('None') : null,
+		_('Encryption'), is_assoc ? active_encryption(radioNet) ?? _('None') : null,
 		_('Channel'),    is_assoc ? `${radioNet.getChannel()} (${radioNet.getFrequency() ?? 0} ${_('GHz')})` : null,
 		_('Tx-Power'),   is_assoc ? `${radioNet.getTXPower()} ${_('dBm')}` : null,
 		_('Signal'),     is_assoc ? `${radioNet.getSignal()} ${_('dBm')}` : null,
@@ -709,7 +726,7 @@ return view.extend({
 
 			if (radioDev) {
 				dom.content(badge, render_radio_badge(radioDev));
-				dom.content(stat, render_radio_status(radioDev, data[2].filter(function(n) { return n.getWifiDeviceName() == radioDev.getName(); })));
+				dom.content(stat, render_radio_status(radioDev, data[2].filter(function(n) { return wifi_uses_radio(n, radioDev.getName()); })));
 			}
 			else {
 				dom.content(badge, render_network_badge(radioNet));
@@ -906,7 +923,9 @@ return view.extend({
 				this.wifis = [];
 
 				data.forEach(d => {
-					this.wifis.push.apply(this.wifis, d);
+					this.wifis.push.apply(this.wifis, d.filter(function(wifi) {
+						return wifi.get('be7000_mlo_off') != '1';
+					}));
 				});
 			}, this));
 		};
@@ -2596,7 +2615,7 @@ return view.extend({
 
 			if (inst.getWifiNetworks)
 				return render_radio_status(inst, this.section.wifis.filter(function(e) {
-					return (e.getWifiDeviceName() == inst.getName());
+					return wifi_uses_radio(e, inst.getName());
 				}));
 			else
 				return render_network_status(inst);

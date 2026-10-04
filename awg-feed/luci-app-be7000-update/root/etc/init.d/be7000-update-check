@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Asks GitHub once a day whether a newer build is out, see be7000-update watch.
+# Turned off with be7000.update.autocheck=0 or on the Build update page.
+START=97
+USE_PROCD=1
+
+start_service() {
+	# a build without a version file is never offered an upgrade, nothing to watch
+	grep -q "^VERSION=." /etc/be7000-release 2>/dev/null || return 0
+	[ "$(uci -q get be7000.update.autocheck)" = 0 ] && return 0
+	procd_open_instance
+	procd_set_param command /usr/sbin/be7000-update watch
+	procd_set_param respawn 3600 30 5
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger be7000
+}

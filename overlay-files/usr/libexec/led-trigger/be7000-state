@@ -1,0 +1,10 @@
+# Application trigger of the stock LED page, sourced by /etc/init.d/led for an
+# LED whose trigger is be7000-state. The LED waits dark until be7000-leds
+# (started after the led service) drives it from the state in the section.
+[ -e /sys/class/leds/${sysfs}/brightness ] && {
+	echo "setting up led ${name} (state)"
+	echo none > /sys/class/leds/${sysfs}/trigger 2>/dev/null
+	echo 0 > /sys/class/leds/${sysfs}/brightness 2>/dev/null
+	# the watcher must set it again, whatever it showed before
+	rm -f "/tmp/be7000-leds/${sysfs}.cur"
+}

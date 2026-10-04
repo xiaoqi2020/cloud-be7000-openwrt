@@ -1,0 +1,159 @@
+#!/bin/sh
+# State triggers for the LEDs, an application trigger of the stock LED page.
+#
+#   seed    put the amber 2.4 GHz LED into /etc/config/system once
+#   watch   drive every LED whose trigger is be7000-state
+#
+# The page System, LEDs (view/system/led-trigger/be7000-state.js) offers the
+# trigger for any LED, /usr/libexec/led-trigger/be7000-state is run by
+# /etc/init.d/led, and the options live in the LED's own section:
+#
+#   be7000_source   service    a process is running       be7000_service
+#                   internet   a host answers a ping      be7000_target
+#                   command    a command exits with 0     be7000_cmd
+#   be7000_show     on | blink, be7000_invert 0|1, be7000_on_ms, be7000_off_ms
+
+. /lib/functions.sh
+
+LEDS=""
+SYSFS=""
+
+# The amber network LED shows Wi-Fi 2.4 GHz traffic by default. It is put into
+# the stock LED configuration once and is the user's from then on.
+seed() {
+	local amber=amber:network
+	[ "$(uci -q get be7000.leds.wlan2g_seeded)" = 1 ] && return 0
+	if ! uci -q get system.led_wlan2g >/dev/null &&
+		! uci -q show system | grep -q "sysfs='$amber'" &&
+		[ -d /sys/class/leds/$amber ]; then
+		uci set system.led_wlan2g=led
+		uci set system.led_wlan2g.name='WIFI 2.4GHz'
+		uci set system.led_wlan2g.sysfs="$amber"
+		uci set system.led_wlan2g.trigger='netdev'
+		uci set system.led_wlan2g.mode='tx rx'
+		uci set system.led_wlan2g.dev='phy0-ap0'
+		uci commit system
+		/etc/init.d/led reload >/dev/null 2>&1
+	fi
+	[ -f /etc/config/be7000 ] || : > /etc/config/be7000
+	uci -q get be7000.leds >/dev/null || uci set be7000.leds=leds
+	uci set be7000.leds.wlan2g_seeded=1
+	uci commit be7000
+}
+
+collect() {
+	local trig sysfs
+	config_get trig "$1" trigger
+	[ "$trig" = be7000-state ] || return 0
+	config_get sysfs "$1" sysfs
+	LEDS="$LEDS $1"
+	SYSFS="$SYSFS $sysfs"
+}
+
+# an LED that no longer has this trigger is put out, the stock page does not
+# touch an LED it has no entry for
+release_gone() {
+	local f name
+	for f in /tmp/be7000-leds/*.cur; do
+		[ -e "$f" ] || continue
+		name=$(basename "$f" .cur)
+		case " $SYSFS " in *" $name "*) continue ;; esac
+		led_off "$name"
+		rm -f "$f" "/tmp/be7000-leds/$name.net"
+	done
+}
+
+led_off() {
+	echo none > /sys/class/leds/$1/trigger 2>/dev/null
+	echo 0 > /sys/class/leds/$1/brightness 2>/dev/null
+}
+
+led_on() {
+	echo none > /sys/class/leds/$1/trigger 2>/dev/null
+	echo 1 > /sys/class/leds/$1/brightness 2>/dev/null
+}
+
+led_blink() {
+	echo timer > /sys/class/leds/$1/trigger 2>/dev/null
+	echo "${2:-500}" > /sys/class/leds/$1/delay_on 2>/dev/null
+	echo "${3:-500}" > /sys/class/leds/$1/delay_off 2>/dev/null
+}
+
+# one round for the LED section $1
+tick() {
+	local sysfs src svc target cmd show inv on_ms off_ms v want cur now last cache
+	config_get sysfs "$1" sysfs
+	[ -d /sys/class/leds/$sysfs ] || return 0
+	config_get src "$1" be7000_source
+	config_get svc "$1" be7000_service
+	config_get target "$1" be7000_target
+	config_get cmd "$1" be7000_cmd
+	config_get show "$1" be7000_show on
+	config_get inv "$1" be7000_invert 0
+	config_get on_ms "$1" be7000_on_ms 500
+	config_get off_ms "$1" be7000_off_ms 500
+
+	mkdir -p /tmp/be7000-leds
+	cache=/tmp/be7000-leds/$sysfs
+	case "$src" in
+	service)
+		[ -n "$svc" ] && pidof "$svc" >/dev/null 2>&1 && v=1 || v=0
+		;;
+	command)
+		[ -n "$cmd" ] && sh -c "$cmd" >/dev/null 2>&1 && v=1 || v=0
+		;;
+	internet)
+		# a ping costs more than a look at the process list: every 15 s
+		now=$(date +%s)
+		last=$(cat $cache.net 2>/dev/null)
+		if [ -z "$last" ] || [ $((now - ${last%% *})) -ge 15 ]; then
+			[ -n "$target" ] && ping -c1 -W2 "$target" >/dev/null 2>&1 && v=1 || v=0
+			echo "$now $v" > $cache.net
+		else
+			v=${last##* }
+		fi
+		;;
+	*)
+		v=0
+		;;
+	esac
+	[ "$inv" = 1 ] && v=$((1 - v))
+	if [ "$v" = 1 ]; then
+		[ "$show" = blink ] && want="blink $on_ms $off_ms" || want=on
+	else
+		want=off
+	fi
+	cur=$(cat $cache.cur 2>/dev/null)
+	[ "$want" = "$cur" ] && return 0
+	case "$want" in
+	on) led_on "$sysfs" ;;
+	blink*) led_blink "$sysfs" "$on_ms" "$off_ms" ;;
+	*) led_off "$sysfs" ;;
+	esac
+	echo "$want" > $cache.cur
+}
+
+watch() {
+	local s
+	rm -rf /tmp/be7000-leds
+	# leave at once when the service is stopped, not after the next sleep
+	trap 'kill $! 2>/dev/null; exit 0' TERM INT
+	while :; do
+		# the configuration is read again every round, so a change on the
+		# LED page takes effect without restarting anything
+		LEDS=""
+		SYSFS=""
+		config_load system
+		config_foreach collect led
+		for s in $LEDS; do tick "$s"; done
+		release_gone
+		sleep 5 &
+		wait $!
+	done
+}
+
+case "$1" in
+seed) seed ;;
+watch) watch ;;
+*) echo "usage: $0 seed | watch"; exit 1 ;;
+esac

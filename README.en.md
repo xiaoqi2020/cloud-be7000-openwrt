@@ -9,11 +9,11 @@ Firmware for the Xiaomi BE7000 based on OpenWrt.
 
 Beam WRT is fresh OpenWrt from main for the Xiaomi BE7000 (RC06 board, IPQ9554 SoC), kernel 6.18, no kexec. Up to 1.3.1 the build was simply called be7000-openwrt, after the repository. The system boots straight from flash, the stock firmware stays in the other slot, and you can go back to it at any time.
 
-**What the firmware can do, what is new in 1.4.0 and how it differs from others is collected on [features.en.md](docs/features.en.md).**
+**What the firmware can do, what is new in 1.4 and how it differs from others is collected on [features.en.md](docs/features.en.md).**
 
 Since 1.4.0 it is based on OpenWrt main (commit d958caf, September 29, 2026) with the kravasuper port on top, as the patch series in patches/port. Up to 1.4.0 the build sat on the kravasuper branch xiaomi_be7000, commit 790d036a. On top of it I added fixes to the Ethernet driver, without which the system on my board never got as far as the network ([patches.en.md](docs/patches.en.md)), and a set of services that make life with two slots and the factory bootloader predictable.
 
-The current version is **1.4.0**. Images are in [Releases](../../releases), checksums in sha256sums.txt. How to install it is in the section [Installation, updating, rollback](#installation-updating-rollback).
+The current version is **1.4.4**. Images are in [Releases](../../releases), checksums in sha256sums.txt. How to install it is in the section [Installation, updating, rollback](#installation-updating-rollback).
 
 ## Contents
 
@@ -37,15 +37,15 @@ My own board is an RC06, IPQ9554 rev 1.1, stock firmware 1.1.38, 1 GB of RAM.
 - Wi-Fi 2.4 and 5 GHz work as Wi-Fi 6, calibration from the ART partition is picked up, the TLMM6 and TLMM7 fix for 5 GHz is applied.
 - Wi-Fi 7 (EHT80) in access point mode works, tested with a laptop. macOS shows PHY Mode 802.11be, channel 36 at 80 MHz, iperf3 945 Mbit/s. Automatic channel selection on 5 GHz also works.
 - With country RU the QCN9274 radio firmware itself forbids 802.11be (NO-EHT shows up in `iw reg get`), and the access point runs as Wi-Fi 6. This is a decision of the radio firmware, not the driver. Since 1.4.0 the 5 GHz mode block warns about it, and a button next to it sets US for 5 GHz only.
-- The MLO mode comes up in a few seconds, the lower radio on channel 36 at 160 MHz, the upper one on 149 at 80 MHz. A Wi-Fi 7 laptop joins such a network on one link, two links adding up on one device is not tested yet.
+- The MLO mode comes up in a few seconds, the lower radio on channel 36 at 160 MHz, the upper one on 149 at 80 MHz. MLO is tested and works. A Wi-Fi 7 laptop joins such a network on one link, two links adding up on one device was not measured, there is no way to run such a test.
 - PPPoE on a live line, sysupgrade keeping settings and the list of enabled services, WireGuard and AmneziaWG (the module and the awg utility are built for this kernel).
 
 ## Known issues
 
 - **Ethernet on some boards before 1.3.0.** The ports brought up a link, but the router did not receive a single frame. The cause was the kernel's RPM request for the l2 regulator, fixed in 1.3.0, details in [patches.en.md](docs/patches.en.md#ethernet-reception-on-some-boards). If the cable still does not work on your board, write in [issue #1](https://github.com/timofey-maykov/be7000-openwrt/issues/1) or in the 4PDA thread, you can get in over Wi-Fi (network OpenWrt-BE7000, password be7000openwrt).
 - In the two-radio and MLO modes each radio gets half of the antennas, so one device is slower than in one-radio mode. The mode is chosen on Network, Wireless or with be7000-5g-split mode, details in [patches.en.md](docs/patches.en.md#two-radios-on-5-ghz).
-- There is 19.4 MB of space for /overlay. For anything large it is better to move it to USB with the be7000-extroot command.
-- The kernel uses the mainline qcom-ppe rather than the vendor NSS. Hardware NAT offload on the PPE came in 1.4.0, but it is experimental and off by default. For Wi-Fi clients packets still pass the CPU once.
+- There is about 20 MB of space for /overlay. For anything large it is better to move it to USB with the be7000-extroot command.
+- The kernel uses the mainline qcom-ppe rather than the vendor NSS. Hardware NAT offload on the PPE came in 1.4.0, it is tested and works, and it is off by default. For Wi-Fi clients packets still pass the CPU once.
 - The port lags behind OpenWrt main, updating the base may require reworking the patches.
 
 ## Installation, updating, rollback
@@ -57,7 +57,7 @@ Everything is described step by step in [docs/instruction](docs/instruction), th
 - [rollback to stock and what to do if something went wrong](docs/instruction/3-rollback-and-problems-en.txt)
 - [firmware features](docs/instruction/4-features-en.txt), packages, 5 GHz modes and MLO, stock settings import, slots, offload, USB storage, Docker
 
-If you update to 1.4.0 from any 1.x version, read the first section of the update file first.
+If you update to 1.4 from any 1.x version, read the first section of the update file first.
 
 Do not touch the bootloader (0:APPSBL and 0:APPSBL_1) under any circumstances, it is the only place where the board can be killed for good.
 
@@ -83,6 +83,9 @@ Services that are not in regular OpenWrt live in overlay-files.
 | be7000-extroot | moves /overlay to a USB disk and keeps it there across updates |
 | be7000-ppe | copies the PPE bridge offload choice into the module options before the module loads |
 | be7000-slots | shows what the slots hold and switches the boot, the System, Slots page |
+| be7000-docker | installs Docker on a disk and sets up the firewall and DNS for the containers, commands setup, firewall, diag |
+| be7000-update | checks for and installs new versions, tells you once a day about a new release |
+| be7000-leds | state triggers for the LEDs, State (Beam WRT) on the LED Configuration page, and the amber Wi-Fi 2.4 GHz LED |
 
 Packages install out of the box. The official mirror builds qualcommbe for cortex-a53, while this build targets cortex-a73, so there is no aarch64_cortex-a73 directory on the mirror and all the common feeds return 404. The image has its own feed configured, built from the same tree and signed with a key the image already trusts. After `apk update` there are more than 600 packages available, including nano, htop, tcpdump, strace, tmux, rsync, jq, modemmanager with USB modem drivers, ksmbd and ttyd. Kernel modules are in a separate feed, because on the mirror they are built for a different kernel. One more separate feed holds hybrid-failover, it rebuilds itself with every new release.
 

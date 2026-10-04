@@ -1,0 +1,58 @@
+# Beam WRT package hooks for the Zapret Manager terminal interface.
+
+# Native packages come from the signed Beam WRT feed.
+[ "$PKG" = apk ] && INSTALL="apk add"
+
+install_Zapret() {
+	update_packages || return 1
+	$INSTALL zapret luci-app-zapret || return 1
+	/etc/init.d/zapret enable >/dev/null 2>&1
+	echo -e "${GREEN}Zapret установлен из фида Beam WRT${NC}\n"
+	PAUSE
+}
+
+install_zapret2() {
+	update_packages || return 1
+	$INSTALL zapret2 luci-app-zapret2 || return 1
+	/etc/init.d/zapret2 enable >/dev/null 2>&1 || true
+	/etc/init.d/zapret2 restart >/dev/null 2>&1 || true
+	echo -e "${GREEN}Zapret2 установлен из фида Beam WRT${NC}\n"
+	PAUSE
+}
+
+PODKOP_INSTALL() {
+	if pkg_is_installed netshift; then
+		PODKOP_DELETE
+		return
+	fi
+	update_packages || return 1
+	$INSTALL netshift luci-app-netshift luci-i18n-netshift-ru || return 1
+	echo -e "${GREEN}NetShift установлен из фида Beam WRT${NC}\n"
+	PAUSE
+}
+
+BYEDPI_INSTALL() {
+	if pkg_is_installed byedpi; then
+		BYEDPI_DELETE
+		return
+	fi
+	update_packages || return 1
+	$INSTALL byedpi || return 1
+	/etc/init.d/byedpi enable >/dev/null 2>&1 || true
+	/etc/init.d/byedpi start >/dev/null 2>&1 || true
+	echo -e "${GREEN}ByeDPI установлен из фида Beam WRT${NC}\n"
+	PAUSE
+}
+
+install_AWG() {
+	update_packages || return 1
+	$INSTALL kmod-amneziawg amneziawg-tools luci-proto-amneziawg || return 1
+	modprobe amneziawg >/dev/null 2>&1 || true
+}
+
+install_zapret_manager_luci() {
+	update_packages || return 1
+	$INSTALL zapret-manager-beam || return 1
+	echo -e "${GREEN}Zapret Manager обновлён из фида Beam WRT${NC}\n"
+	PAUSE
+}

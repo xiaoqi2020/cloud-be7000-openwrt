@@ -1,0 +1,105 @@
+# Beam WRT package hooks for the Zapret Manager LuCI backend.
+
+# The upstream panel accepts unsigned apk files. Beam WRT publishes every
+# package through its signed feed, so keep apk's signature check enabled.
+[ "$PKG" = apk ] && PKG_ADD="apk add"
+
+_beam_pkg_install() {
+	local p
+	$UPDATE || return 1
+	for p in "$@"; do
+		_pkg_is_installed "$p" && continue
+		echo "==> Устанавливаем $p из фида Beam WRT"
+		$INSTALL "$p" || return 1
+	done
+}
+
+_do_install_zapret_core() {
+	[ -f /etc/init.d/zapret2 ] && [ ! -f "$EXPERT_MODE_FILE" ] && {
+		echo "ОШИБКА: установлен Zapret2, сначала удалите его"
+		return 1
+	}
+	_beam_pkg_install zapret luci-app-zapret || return 1
+	_nochange_restore zapret
+	_nochange_fetch /opt/zapret/ipset/zapret-hosts-user-exclude.txt "$EXCLUDE_URL" || true
+	do_add_fake_flow
+	/etc/init.d/zapret enable >/dev/null 2>&1
+	sed -i "/DISABLE_CUSTOM/s/'1'/'0'/" "$CONF" 2>/dev/null
+	echo "==> Zapret установлен из фида Beam WRT"
+}
+
+_do_install_zapret2_core() {
+	[ -f /etc/init.d/zapret ] && [ ! -f "$EXPERT_MODE_FILE" ] && {
+		echo "ОШИБКА: установлен Zapret, сначала удалите его"
+		return 1
+	}
+	_beam_pkg_install zapret2 luci-app-zapret2 || return 1
+	/etc/init.d/zapret2 enable >/dev/null 2>&1 || true
+	/etc/init.d/zapret2 restart >/dev/null 2>&1 || true
+	echo "==> Zapret2 установлен из фида Beam WRT"
+}
+
+_bytetube_install_byedpi() {
+	[ -x /usr/bin/ciadpi ] && return 0
+	_beam_pkg_install byedpi || return 1
+	NEW_BYEDPI=1
+}
+
+_st_install_awg() {
+	local p
+	$UPDATE || return 1
+	for p in kmod-amneziawg amneziawg-tools luci-proto-amneziawg; do
+		_pkg_is_installed "$p" || $INSTALL "$p" || return 1
+	done
+	modprobe amneziawg >/dev/null 2>&1 || true
+	command -v awg >/dev/null 2>&1 && _st_awg_loaded
+}
+
+zm_update_status() {
+	local cur latest newer=false
+	cur="$(_awg_pkg_ver zapret-manager-beam)"
+	latest="$(_ver_feed_latest zapret-manager-beam)"
+	[ -n "$latest" ] && [ "$cur" != "$latest" ] && newer=true
+	printf '{"current":"%s","latest":"%s","newer":%s}\n' "$(esc "$cur")" "$(esc "$latest")" "$newer"
+}
+
+zm_update_action() {
+	job_start zm_update _beam_pkg_install zapret-manager-beam
+}
+
+# The panel removes itself from a script that rpcd started, and that script
+# ends with "rpcd restart". procd stops the whole instance, the script with it,
+# so rpcd is never started again and LuCI loses its login. Reload instead:
+# rpcd rescans its plugins on SIGHUP and nothing gets killed.
+system_uninstall_panel() {
+	local script="/tmp/zm_uninstall_panel.sh" j
+	if j="$(_zm_busy_job)"; then
+		printf '{"error":"%s"}\n' "$(esc "идёт операция «$j» — дождитесь её окончания и удалите панель")"
+		return 1
+	fi
+	cat > "$script" << 'ZM_UNINSTALL_EOF'
+sleep 1
+/opt/zapret-manager-luci/backend.sh redbtn_panel_gone >/dev/null 2>&1
+rm -rf /opt/zapret-manager-luci /usr/libexec/rpcd/zapret-manager \
+	/usr/share/luci/menu.d/luci-app-zapret-manager.json \
+	/usr/share/rpcd/acl.d/luci-app-zapret-manager.json \
+	/www/luci-static/resources/view/zapret-manager \
+	/www/luci-static/resources/zapret-manager \
+	/www/luci-static/resources/bytetube \
+	/www/luci-static/resources/view/bytetube \
+	/tmp/zapret-manager-luci /tmp/luci-indexcache* /tmp/luci-modulecache/* \
+	/www/zm /www/zm-webui.html /etc/zm-warp-own.conf 2>/dev/null
+[ -s /etc/zm-steer/owned ] || rm -rf /usr/share/zm-redbtn
+if grep -q '/opt/zapret-manager-luci/backend.sh' /etc/crontabs/root 2>/dev/null; then
+	sed -i '\#/opt/zapret-manager-luci/backend.sh#d' /etc/crontabs/root
+	/etc/init.d/cron restart >/dev/null 2>&1
+fi
+uci -q delete uhttpd.zmweb && uci -q commit uhttpd
+/etc/init.d/rpcd reload >/dev/null 2>&1
+/etc/init.d/uhttpd restart >/dev/null 2>&1
+rm -f "$0"
+ZM_UNINSTALL_EOF
+	chmod 0755 "$script"
+	( sh "$script" >/dev/null 2>&1 & )
+	printf '{"ok":true}\n'
+}

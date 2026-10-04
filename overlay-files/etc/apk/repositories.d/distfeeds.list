@@ -5,6 +5,6 @@
 # 404 and apk prints a wget error for each on every update. Packages for this
 # CPU type come from the feed in customfeeds.list instead.
 #
-# The target feed below does exist and is kept: it carries packages this
-# firmware does not build itself.
-https://downloads.openwrt.org/snapshots/targets/qualcommbe/ipq95xx/packages/packages.adb
+# The official target feed is not listed either. Its kernel ABI follows the
+# moving snapshot and does not match this image. Kernel packages come from the
+# matching Beam WRT target feed in customfeeds.list.

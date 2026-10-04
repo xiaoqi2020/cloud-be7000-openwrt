@@ -70,6 +70,26 @@ function method_status() {
 	};
 }
 
+// Whether containers can reach the internet and the LAN can reach their
+// published ports, see the firewall command of the helper.
+function method_firewall_status() {
+	return {
+		call: function() {
+			let r = sh(`${shellquote(HELPER)} firewall --check`);
+			return { ok: true, data: { configured: r.ok } };
+		}
+	};
+}
+
+function method_firewall_fix() {
+	return {
+		call: function() {
+			let r = sh(`${shellquote(HELPER)} firewall`);
+			return { ok: r.ok, output: r.output };
+		}
+	};
+}
+
 function method_df() {
 	return {
 		call: function() {
@@ -171,6 +191,8 @@ return {
 	'be7000-docker': {
 		status: method_status(),
 		df: method_df(),
+		firewall_status: method_firewall_status(),
+		firewall_fix: method_firewall_fix(),
 		prune: method_prune(),
 		stacks: method_stacks(),
 		stack_read: method_stack_read(),

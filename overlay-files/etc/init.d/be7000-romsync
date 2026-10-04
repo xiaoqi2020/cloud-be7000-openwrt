@@ -23,6 +23,7 @@ WORLD=/etc/apk/world
 WORLD_ROM=/rom/etc/apk/world
 PENDING=/etc/be7000-reinstall
 FEED_HOST=timofey-maykov.github.io/be7000-openwrt
+DNS_BACKUP=/etc/be7000-dhcp.before-reinstall
 
 kernel_of() {
 	grep -oE 'kernel=[0-9.]+~[0-9a-f]{32}' "$1" 2>/dev/null | head -1 | sed 's/.*~//'
@@ -32,6 +33,50 @@ kernel_of() {
 # versions, and those pins must follow the image, not the user
 names_of() {
 	sed -e 's/[=<>~].*//' -e '/^$/d' -e '/^kernel$/d' -e '/^base-files$/d' "$1" 2>/dev/null | sort -u
+}
+
+# Hybrid Failover can own dnsmasq's upstream at 127.0.0.42. After sysupgrade
+# its configuration is already present while its package is still waiting to
+# be reinstalled. Give apk a direct resolver until the package is back. Keep
+# the original DHCP configuration on persistent storage so a failed download
+# can be retried on the next boot without leaving DNS broken.
+prepare_reinstall_dns() {
+	[ -s "$DNS_BACKUP" ] && return 0
+	grep -qx 'hybrid-failover-core' "$PENDING" 2>/dev/null || return 0
+	[ -x /usr/sbin/hybrid-failover ] && return 0
+	uci -q get dhcp.@dnsmasq[0].server | grep -q '127\.0\.0\.42' || return 0
+
+	cp -p /etc/config/dhcp "$DNS_BACKUP" || return 0
+	chmod 600 "$DNS_BACKUP"
+	uci set dhcp.@dnsmasq[0].noresolv=1
+	uci -q delete dhcp.@dnsmasq[0].server
+	uci add_list dhcp.@dnsmasq[0].server=8.8.8.8
+	uci add_list dhcp.@dnsmasq[0].server=77.88.8.8
+	uci commit dhcp
+	/etc/init.d/dnsmasq restart >/dev/null 2>&1
+	logger -t be7000-romsync "using direct DNS while Hybrid Failover is being restored"
+}
+
+restore_reinstall_dns() {
+	[ -s "$DNS_BACKUP" ] || return 0
+	[ -x /usr/sbin/hybrid-failover ] || return 0
+	/etc/init.d/hybrid-failover start >/dev/null 2>&1 || return 0
+
+	local i=0
+	while [ $i -lt 10 ]; do
+		netstat -lnup 2>/dev/null | grep -q '127\.0\.0\.42:53' && break
+		sleep 2
+		i=$((i + 1))
+	done
+	[ $i -lt 10 ] || {
+		logger -t be7000-romsync "Hybrid Failover DNS did not start, keeping direct DNS"
+		return 0
+	}
+
+	cp -f "$DNS_BACKUP" /etc/config/dhcp
+	rm -f "$DNS_BACKUP"
+	/etc/init.d/dnsmasq restart >/dev/null 2>&1
+	logger -t be7000-romsync "restored Hybrid Failover DNS after package reinstall"
 }
 
 reconcile() {
@@ -61,7 +106,12 @@ reconcile() {
 }
 
 reinstall_pending() {
-	[ -s "$PENDING" ] || return 0
+	if [ ! -s "$PENDING" ]; then
+		# a restore that gave up after the package was installed has no
+		# retry marker left, so try again on the next boot
+		[ -s "$DNS_BACKUP" ] && ( restore_reinstall_dns ) </dev/null >/dev/null 2>&1 &
+		return 0
+	fi
 	(
 		# wait for a route to the outside, give up quietly after ten minutes
 		local i=0
@@ -70,6 +120,7 @@ reinstall_pending() {
 			sleep 10; i=$((i + 1))
 		done
 		sleep 15
+		prepare_reinstall_dns
 		# downloads from GitHub Pages occasionally get reset mid-way; a few
 		# tries are cheap, apk skips what is already there
 		local n=0 ok=0 p gone="" left=""
@@ -120,6 +171,7 @@ reinstall_pending() {
 		if [ -z "$left" ] || apk add $left >/tmp/be7000-reinstall.log 2>&1; then
 			logger -t be7000-romsync "reinstalled after image change:$left"
 			rm -f "$PENDING"
+			restore_reinstall_dns
 			exit 0
 		fi
 		# one bad package should not keep the others out
@@ -127,12 +179,16 @@ reinstall_pending() {
 		for p in $left; do
 			apk add "$p" >>/tmp/be7000-reinstall.log 2>&1 || echo "$p" >> "$PENDING.new"
 		done
+		# Restore Hybrid Failover DNS as soon as its core is back, even when an
+		# unrelated package remains for the next boot.
+		restore_reinstall_dns
 		if [ -s "$PENDING.new" ]; then
 			mv "$PENDING.new" "$PENDING"
 			logger -t be7000-romsync "reinstalled after image change, except (retry next boot): $(tr '\n' ' ' < "$PENDING")"
 		else
 			rm -f "$PENDING" "$PENDING.new"
 			logger -t be7000-romsync "reinstalled after image change:$left"
+			restore_reinstall_dns
 		fi
 	) </dev/null >/dev/null 2>&1 &
 }

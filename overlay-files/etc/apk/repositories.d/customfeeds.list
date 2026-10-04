@@ -7,6 +7,12 @@ https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/base/pac
 https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/packages/packages.adb
 https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/luci/packages.adb
 https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/awg/packages.adb
+https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/awgproto/packages.adb
+https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/beamextras/packages.adb
+https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/byedpi/packages.adb
+https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/netshift/packages.adb
+https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/zapret/packages.adb
+https://timofey-maykov.github.io/be7000-openwrt/feed/aarch64_cortex-a73/zapret2/packages.adb
 
 # hybrid-failover, rebuilt from every new upstream release
 https://timofey-maykov.github.io/be7000-openwrt/feed/hybrid-failover/aarch64_cortex-a73/packages.adb

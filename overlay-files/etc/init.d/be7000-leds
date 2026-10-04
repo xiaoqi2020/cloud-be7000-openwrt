@@ -1,0 +1,18 @@
+#!/bin/sh /etc/rc.common
+# State triggers for the LEDs, see /usr/libexec/be7000-leds. Starts after the
+# led service (START=96) so its configuration is already applied, and again
+# whenever the LED configuration changes.
+START=97
+USE_PROCD=1
+
+start_service() {
+	/usr/libexec/be7000-leds seed
+	procd_open_instance
+	procd_set_param command /usr/libexec/be7000-leds watch
+	procd_set_param respawn 3600 10 5
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger system
+}

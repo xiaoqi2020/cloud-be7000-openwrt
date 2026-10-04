@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -eu
+
+backend=/opt/zapret-manager-luci/backend.sh
+cli=/usr/share/zapret-manager-beam/Zapret-Manager.sh
+
+[ -s "$backend" ] || { echo "Zapret Manager backend was not created" >&2; exit 1; }
+
+if ! grep -q '^\. /usr/libexec/zapret-manager-beam-functions$' "$backend"; then
+	sed -i '/^cmd="\$1"; shift$/i . /usr/libexec/zapret-manager-beam-functions' "$backend"
+fi
+
+if ! grep -q '^\. /usr/libexec/zapret-manager-beam-cli-functions$' "$cli"; then
+	sed -i '/^case "\$1" in --auto-best)/i . /usr/libexec/zapret-manager-beam-cli-functions' "$cli"
+fi
+
+printf '%s\n' \
+	'#!/bin/sh' \
+	'exec /bin/bash /usr/share/zapret-manager-beam/Zapret-Manager.sh "$@"' \
+	> /usr/bin/zms
+cp /usr/bin/zms /usr/bin/zmsA
+chmod 0755 /usr/bin/zms /usr/bin/zmsA
+
+rm -f /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null || true
+/etc/init.d/rpcd reload >/dev/null 2>&1 || /etc/init.d/rpcd restart >/dev/null 2>&1 || true

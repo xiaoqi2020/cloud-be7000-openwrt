@@ -43,6 +43,20 @@ return {
 		status: query('status'),
 		check: query('check'),
 		download: query('download'),
+		// the daily check on or off, answers with the fresh status
+		autocheck_set: {
+			args: { on: false },
+			call: function(req) {
+				let res = run([ 'autocheck', req.args?.on ? 'on' : 'off', '--json' ]);
+				try {
+					let data = json(res.output);
+					if (type(data) == 'object')
+						return data;
+				}
+				catch (e) {}
+				return { ok: false, error: res.output };
+			}
+		},
 		// sysupgrade never returns; start it detached and let the page poll
 		// until the router goes away.
 		apply: {

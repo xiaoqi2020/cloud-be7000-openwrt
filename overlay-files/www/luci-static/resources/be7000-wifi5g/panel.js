@@ -230,19 +230,26 @@ function lang() {
 	return /^zh/i.test(l) ? 'zh' : /^en/i.test(l) ? 'en' : 'ru';
 }
 
+function wifiUsesRadio(net, radioName) {
+	return L.toArray(net.get('device')).indexOf(radioName) > -1 || net.getWifiDeviceName() == radioName;
+}
+
 // 5 GHz wifi-devices of the QCN9274 with channel, width and client count
 function radioState() {
-	return network.getWifiDevices().then(function(devs) {
+	return Promise.all([ network.getWifiDevices(), network.getWifiNetworks() ]).then(function(data) {
+		var devs = data[0], allNets = data[1];
 		devs = devs.filter(function(d) {
 			return d.get('band') == '5g' && String(d.get('path') || '').indexOf(PCI) > -1;
 		});
 		return Promise.all(devs.map(function(d) {
-			return d.getWifiNetworks().then(function(nets) {
-				return Promise.all(nets.map(function(n) {
+			var nets = allNets.filter(function(n) { return wifiUsesRadio(n, d.getName()); });
+			return Promise.all(nets.map(function(n) {
 					return L.resolveDefault(n.getAssocList(), []);
-				})).then(function(lists) {
+			})).then(function(lists) {
 					var up = nets.some(function(n) { return n.isUp(); });
-					var ch = null, width = null;
+					var mlo = nets.some(function(n) { return n.get('mlo') == '1'; });
+					var ch = mlo ? d.get('channel') : null;
+					var width = mlo ? (String(d.get('htmode') || '').match(/(\d+)$/) || [])[1] : null;
 					nets.forEach(function(n) {
 						if (n.isUp()) {
 							ch = ch || n.getChannel();
@@ -256,9 +263,9 @@ function radioState() {
 						channel: ch || d.get('channel'),
 						width: width,
 						htmode: d.get('htmode'),
+						mlo: mlo,
 						clients: lists.reduce(function(a, l) { return a + (l ? l.length : 0); }, 0)
 					};
-				});
 			});
 		}));
 	}).then(function(list) {
@@ -278,11 +285,13 @@ function modeCard(tx, key, on, btn) {
 function radioChip(tx, r) {
 	var mhz = r.width || (String(r.htmode || '').match(/(\d+)$/) || [])[1];
 	var label = (r.idx == '0') ? tx.low : (r.idx == '1') ? tx.high : tx.one;
+	var state = '%s %s%s'.format(tx.ch, r.channel || '?', mhz ? ', ' + mhz + ' ' + tx.mhz : '');
+	state += r.mlo ? ', ' + tx.mloLink : ', %d %s'.format(r.clients, tx.clients(r.clients));
 	return E('div', { 'class': 'b5-radio', 'title': r.name }, [
 		E('span', { 'class': 'b5-dot' + (r.up ? '' : ' off') }),
 		E('b', {}, label),
 		r.up
-			? E('span', { 'class': 'b5-sub' }, '%s %s%s, %d %s'.format(tx.ch, r.channel || '?', mhz ? ', ' + mhz + ' ' + tx.mhz : '', r.clients, tx.clients(r.clients)))
+			? E('span', { 'class': 'b5-sub' }, state)
 			: E('span', { 'class': 'b5-sub' }, tx.off)
 	]);
 }
@@ -398,12 +407,27 @@ return baseclass.extend({
 	// poll until the switch is done, then reload: the wireless config has
 	// new or removed radios and the list below has to be built again
 	wait: function(root, tx, was, want) {
-		var tries = 0;
+		var tries = 0, started = Date.now();
 		var tick = function() {
 			L.resolveDefault(callStatus(), {}).then(function(st) {
+				// Switching the 5 GHz radios briefly disconnects clients. An
+				// RPC failure during that gap is not a failed mode switch.
+				if (typeof st.available != 'boolean') {
+					if (Date.now() - started < 510000) {
+						window.setTimeout(tick, 3000);
+						return;
+					}
+					ui.showModal(tx.failed, [
+						E('pre', {}, '-'),
+						E('div', { 'class': 'right' }, E('button', { 'class': 'cbi-button', 'click': function() { location.reload(); } }, 'OK'))
+					]);
+					return;
+				}
 				if (!st.running && tries > 1) {
 					var now = st.mode || (st.split ? 'split' : 'single');
-					if (want ? now != want : now == was) {
+					var expected = want || was;
+					var ready = now == expected && (expected != 'mlo' || st.mlo_up === true);
+					if (!ready) {
 						ui.showModal(tx.failed, [
 							E('pre', {}, st.log || '-'),
 							E('div', { 'class': 'right' }, E('button', { 'class': 'cbi-button', 'click': function() { location.reload(); } }, 'OK'))

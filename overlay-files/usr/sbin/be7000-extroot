@@ -296,12 +296,47 @@ cmd_revert() {
 # settings, and reboot once onto the disk if it is plugged in. When the entry
 # is already there nothing changes, so this cannot loop.
 cmd_boot_sync() {
-	local rd cur mnt dir="" uuid en rd_uuid rd_en kver changed=0
+	local rd cur mnt dir="" uuid en rd_uuid rd_en kver changed=0 marker bigdev bigen extuuid exten useful _w
 	[ -e /rom/etc/be7000-test ] && return 0
 	rd="$(rootfs_data_dev)" || return 0
 	cur="$(current_overlay_device)"
-	# running on rootfs_data itself: the live settings are the ones fstools read
-	[ "$cur" = "$rd" ] && return 0
+	# On the first boot after sysupgrade the restored fstab arrives only after
+	# fstools has already selected the new slot's small rootfs_data. Reboot once
+	# so the early boot can read that fstab and select the shared cfg volume.
+	# The marker belongs to this slot's rootfs_data and prevents a reboot loop
+	# if the configured volume still cannot be mounted.
+	if [ "$cur" = "$rd" ]; then
+		marker=/etc/.be7000_overlay_retry
+		bigdev="$(uci -q get fstab.bigoverlay.device || true)"
+		bigen="$(uci -q get fstab.bigoverlay.enabled || true)"
+		# A disk named as extroot counts first: fstools prefers it, so the
+		# reboot gets the router onto the disk whatever bigoverlay's own
+		# switch says (a router that lives on a USB disk keeps bigoverlay off).
+		# The settings volume alone counts only while bigoverlay is switched
+		# on and has not failed: with it off or a failed migration, there is
+		# no overlay there to use.
+		extuuid="$(uci -q get fstab.extroot.uuid || true)"
+		exten="$(uci -q get fstab.extroot.enabled || true)"
+		useful=0
+		if [ "${exten:-0}" = 1 ] && [ -n "$extuuid" ]; then
+			# the USB disk may still be coming up
+			for _w in 1 2 3 4 5 6 7 8; do
+				block info 2>/dev/null | grep -qi "$extuuid" && { useful=1; break; }
+				sleep 2
+			done
+		fi
+		if [ $useful = 0 ] && [ "$(uci -q get bigoverlay.main.enabled)" = 1 ] && [ ! -e /etc/bigoverlay.failed ] &&
+			[ "${bigen:-0}" = 1 ] && [ -n "$bigdev" ] && [ -e "$bigdev" ]; then
+			useful=1
+		fi
+		if [ $useful = 1 ] && [ ! -e "$marker" ]; then
+			touch "$marker"
+			sync
+			logger -t be7000-extroot "fstab was restored after early boot, rebooting once to use the configured overlay"
+			( sleep 5; reboot ) </dev/null >/dev/null 2>&1 &
+		fi
+		return 0
+	fi
 
 	uuid="$(uci -q get fstab.extroot.uuid || true)"
 	en="$(uci -q get fstab.extroot.enabled || true)"

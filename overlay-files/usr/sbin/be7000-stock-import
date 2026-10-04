@@ -7,6 +7,8 @@
 #   be7000-stock-import apply        take it (backup first)
 #   be7000-stock-import undo         restore the settings from before apply
 #   be7000-stock-import status
+#   be7000-stock-import diag         what this router sees where stock keeps its
+#                                    settings, for a report; no secrets in it
 #   be7000-stock-import auto         first boot of a fresh install (init.d)
 #
 # Stock keeps its uci config in a LUKS1 container, sec_cfg/data.vol on its
@@ -44,11 +46,13 @@ cleanup() {
 stock_root() {
 	local n dev dir
 	ROOT=
+	SAW_VOL=
 	[ -n "$BE7000_STOCK_ROOT" ] && { ROOT="$BE7000_STOCK_ROOT"; return 0; }
 	[ -e /overlay/sec_cfg/data.vol ] && { ROOT=/overlay; return 0; }
 	for n in /sys/class/ubi/ubi*_*/name; do
 		[ -e "$n" ] || continue
 		case "$(cat "$n")" in cfg|data) ;; *) continue ;; esac
+		SAW_VOL=1
 		dev=/dev/$(basename "$(dirname "$n")")
 		dir="$(mount | awk -v d="$dev" '$1 == d { print $3; exit }')"
 		if [ -n "$dir" ]; then
@@ -84,10 +88,15 @@ open_stock() {
 	local vol
 	command -v cryptsetup >/dev/null || die "cryptsetup is missing"
 	mkdir -p $WORK/mnt
-	stock_root || die "no stock settings found (sec_cfg/data.vol)"
+	if ! stock_root; then
+		if [ -n "$SAW_VOL" ]; then
+			die "the settings volume of stock is there but holds no sec_cfg/data.vol: stock was never set up, or its settings were erased (a stock reset, or an older Beam WRT that formatted the partition); be7000-stock-import diag shows what is there"
+		fi
+		die "no volume named cfg or data on the settings partition (mtd overlay); be7000-stock-import diag shows what this router sees"
+	fi
 	vol="$ROOT/sec_cfg/data.vol"
 	[ -s "$vol" ] || vol="$ROOT/usr/sec_cfg/data.vol"
-	[ -s "$vol" ] || die "no stock settings found (sec_cfg/data.vol)"
+	[ -s "$vol" ] || die "no stock settings found (sec_cfg/data.vol), be7000-stock-import diag shows what this router sees"
 	log "stock container $vol, sha256 $(sha256sum "$vol" | cut -c1-16)"
 	make_key "$ROOT" || die "cannot build the key (no SN in the bootloader environment?)"
 	# work on a copy: nothing here can write to the original
@@ -318,6 +327,43 @@ cmd_auto() {
 	cmd_apply auto >/dev/null 2>&1 || logger -t be7000-stock-import "stock settings not taken: $(tail -1 $LOG)"
 }
 
+cmd_diag() {
+	local d n dev dir found
+	echo "== partitions"
+	grep -E '"(overlay|rootfs|rootfs_1|kernel|kernel_1)"' /proc/mtd
+	echo "== UBI devices"
+	for d in /sys/class/ubi/ubi[0-9]*; do
+		[ -e "$d/mtd_num" ] || continue
+		case "$(basename "$d")" in *_*) continue ;; esac
+		echo "$(basename "$d") on mtd$(cat "$d/mtd_num")"
+	done
+	echo "== UBI volumes"
+	for n in /sys/class/ubi/ubi*_*/name; do
+		[ -e "$n" ] || continue
+		dev=$(basename "$(dirname "$n")")
+		dir="$(mount | awk -v d="/dev/$dev" '$1 == d { print $3; exit }')"
+		echo "$dev name=$(cat "$n") mounted=${dir:-no}"
+	done
+	echo "== stock settings"
+	if stock_root; then
+		echo "found under $ROOT"
+		ls "$ROOT" 2>/dev/null | tr '\n' ' '; echo
+		ls -la "$ROOT/sec_cfg" "$ROOT/usr/sec_cfg" 2>/dev/null
+		[ -s "$ROOT/sec_cfg/iden" ] && echo "iden: present" || echo "iden: missing (the nonce comes from the bootloader)"
+	else
+		echo "not found: no volume named cfg or data holds sec_cfg/data.vol"
+	fi
+	cleanup
+	echo "== bootloader"
+	echo "SN: $([ -n "$(fw_printenv -n SN 2>/dev/null)" ] && echo present || echo missing)"
+	fw_printenv flag_boot_rootfs flag_last_success flag_format_overlay 2>/dev/null
+	echo "== this system"
+	echo "running slot: $(grep -o 'ubi.mtd=rootfs[_0-9]*' /proc/cmdline)"
+	echo "overlay: $(mount | awk '$3 == "/overlay" {print $1, $5}')"
+	echo "== last log"
+	tail -n 20 $LOG 2>/dev/null
+}
+
 mkdir -p $WORK
 case "$1" in
 preview) cmd_preview ;;
@@ -326,5 +372,6 @@ undo) cmd_undo ;;
 status) cmd_status ;;
 auto) cmd_auto ;;
 wifi-pending) cmd_wifi_pending ;;
-*) echo "usage: $0 preview|apply|undo|status" >&2; exit 1 ;;
+diag) cmd_diag ;;
+*) echo "usage: $0 preview|apply|undo|status|diag" >&2; exit 1 ;;
 esac

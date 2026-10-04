@@ -47,7 +47,7 @@ System, Slots shows what each of the two slots holds, which one runs and which o
 
 Hardware offload
 
-This is an experimental feature and it is off by default. It is turned on at Network, Hardware offload.
+The feature is tested and works, and it is off by default. It is turned on at Network, Hardware offload.
 
 Routing and NAT can be done by a separate network engine, the PPE, instead of the main CPU. The bridge between the wired LAN ports can be offloaded as well. The page explains what is offloaded, what it does not mix with (SQM, for example) and how to turn it off from the console if something goes wrong.
 
@@ -72,9 +72,11 @@ be7000-docker status
 be7000-docker setup --yes
 be7000-docker setup --data-root /mnt/usb/docker --yes
 
-Without parameters the command looks for a mounted disk with at least a gigabyte free. Docker has not been tested in use on this board yet.
+Without parameters the command looks for a mounted disk with at least a gigabyte free. Docker is tested on this board: it installs, containers reach the internet and their ports open from the local network.
 
 Containers, images, networks and volumes are on Services, Dockerman. docker-compose stacks, ready-made sets in one click and cleanup are on Services, "Docker: stacks". Ready-made sets exist for Portainer, AdGuard Home, Uptime Kuma, Vaultwarden, qBittorrent, Nginx Proxy Manager, Home Assistant and Watchtower.
+
+If containers cannot reach the internet or their web interface does not open from the local network, the firewall has to allow forwarding from the docker zone. The be7000-docker setup command does it by itself, and for a Docker installed earlier there is the be7000-docker firewall command and a button on Services, "Docker: stacks". Details are in the "Containers without internet" section of docs/cookbook.en.md. If a container still has no network after that, be7000-docker diag prints everything needed to look into it in one piece.
 
 
 What else is there

@@ -3,7 +3,10 @@
 import { popen } from 'fs';
 
 const BIN = '/usr/libexec/be7000-addons';
-const IDS = [ 'hybrid-failover' ];
+
+function validId(id) {
+	return id == 'hybrid-failover' || id == 'zapret-manager';
+}
 
 function run(args) {
 	let fd = popen(`${BIN} ${args} 2>&1`, 'r');
@@ -18,7 +21,7 @@ return {
 			args: { id: '' },
 			call: function(req) {
 				let id = req.args?.id;
-				if (!(id in IDS))
+				if (!validId(id))
 					return { error: 'unknown add-on' };
 				let r = run(`status ${id}`);
 				try { return json(r.out); } catch (e) { return { error: r.out }; }
@@ -28,7 +31,7 @@ return {
 			args: { id: '', bot: false },
 			call: function(req) {
 				let id = req.args?.id;
-				if (!(id in IDS))
+				if (!validId(id))
 					return { ok: false, output: 'unknown add-on' };
 				let r = run(`install ${id}${req.args?.bot ? ' bot' : ''}`);
 				return { ok: r.rc == 0, output: r.out };

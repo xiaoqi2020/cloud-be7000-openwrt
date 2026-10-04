@@ -29,7 +29,10 @@ var CSS = `
 
 return view.extend({
 	load: function() {
-		return L.resolveDefault(callStatus('hybrid-failover'), {});
+		return Promise.all([
+			L.resolveDefault(callStatus('hybrid-failover'), {}),
+			L.resolveDefault(callStatus('zapret-manager'), {})
+		]);
 	},
 
 	install: function(st, botBox, logBox) {
@@ -56,7 +59,32 @@ return view.extend({
 		});
 	},
 
-	render: function(st) {
+	installSimple: function(id, logBox) {
+		return callInstall(id, false).then(function(r) {
+			if (!r || !r.ok) {
+				ui.addNotification(null, E('p', (r && r.output) || _('Не удалось начать установку')), 'danger');
+				return;
+			}
+			logBox.style.display = '';
+			var tick = function() {
+				return L.resolveDefault(callLog(), {}).then(function(l) {
+					var text = (l && l.log) || '';
+					logBox.textContent = text;
+					logBox.scrollTop = logBox.scrollHeight;
+					if (/^=== (done|failed)/m.test(text)) {
+						poll.remove(tick);
+						if (/^=== done/m.test(text))
+							window.setTimeout(function() { window.location.reload(); }, 1500);
+					}
+				});
+			};
+			poll.add(tick, 2);
+		});
+	},
+
+	render: function(data) {
+		var st = data[0] || {};
+		var zm = data[1] || {};
 		var installed = st.installed || '';
 		var feed = st.feed || '';
 		var badges = [];
@@ -95,10 +123,53 @@ return view.extend({
 		if (st.manual)
 			notes.push(_('Сейчас Hybrid Failover стоит не из фида, а своим скриптом установки. Установка отсюда заменит его пакетами из фида, настройки сохранятся. После этого обновления будут приходить вместе с остальными пакетами.'));
 
+		var zmInstalled = zm.installed || '';
+		var zmFeed = zm.feed || '';
+		// the package is there but its installer step did not finish
+		var zmBroken = zmInstalled && !zm.panel;
+		var zmBadges = [ E('span', { 'class': 'ba-badge ' + (zmInstalled ? '' : 'soft') },
+			zmInstalled ? _('установлен %s').format(zmInstalled) : _('не установлен')) ];
+		if (zmBroken)
+			zmBadges.push(E('span', { 'class': 'ba-badge soft' }, _('нужно доустановить')));
+		var zmLabel = zmBroken ? _('Доустановить') : !zmFeed ? (zmInstalled ? _('Установлен') : _('Пока недоступен')) :
+			!zmInstalled ? _('Установить') : zmInstalled == zmFeed ? _('Переустановить') : _('Обновить до %s').format(zmFeed);
+		var zmLog = E('pre', { 'class': 'ba-log', 'style': 'display:none' });
+
 		return E([], [
 			E('style', {}, CSS),
 			E('h2', {}, _('Дополнения')),
 			E('div', { 'class': 'cbi-map-descr' }, _('Программы, которые не входят в прошивку, но собраны для неё и ставятся из фида Beam WRT одной кнопкой. Новые версии появляются в фиде сами, после выхода каждого релиза.')),
+
+			E('div', { 'class': 'ba-card' }, [
+				E('h3', {}, [ 'Zapret Manager' ].concat(zmBadges)),
+				E('p', { 'class': 'ba-lead' }, _('Панель для установки и настройки Zapret, Zapret2, ByeDPI, ByeTube, NetShift, AmneziaWG и других средств маршрутизации и обхода блокировок.')),
+
+				E('h4', {}, _('Версия для Beam WRT')),
+				E('p', {}, _('Менеджер адаптирован под архитектуру aarch64_cortex-a73 и пакетный менеджер apk. Zapret, Zapret2, ByeDPI, NetShift, sing-box, hev-socks5-tunnel и интерфейс AmneziaWG ставятся из подписанного фида Beam WRT.')),
+
+				E('h4', {}, _('Что произойдёт при установке')),
+				E('ul', {}, [
+					E('li', {}, _('Поставится только панель Zapret Manager и её служебные зависимости. Zapret и другие способы обхода не включаются автоматически.')),
+					E('li', {}, _('После установки откройте панель и выберите нужный способ. Его пакеты будут установлены из фида Beam WRT с проверкой подписи.')),
+					E('li', {}, _('Внешние модули AmneziaWG не используются. Менеджер оставляет встроенный модуль, который собран вместе с ядром этой прошивки.'))
+				]),
+
+				E('div', { 'class': 'ba-act' }, [
+					E('button', {
+						'class': 'cbi-button cbi-button-action important',
+					'disabled': zm.running || (!zmFeed && !zmBroken) ? true : null,
+						'click': ui.createHandlerFn(this, 'installSimple', 'zapret-manager', zmLog)
+					}, zmLabel),
+					zm.panel ? E('a', { 'class': 'cbi-button cbi-button-neutral', 'href': L.url('admin/services/zapret-manager') }, _('Открыть Zapret Manager')) : ''
+				]),
+				zmBroken ? E('div', { 'class': 'ba-note' }, _('Пакет Zapret Manager стоит, но сама панель не создалась. Обычно так бывает, когда во время установки не было интернета. Нажмите кнопку, чтобы завершить установку, роутеру понадобится доступ в интернет.')) : '',
+				!zmFeed && !zmBroken ? E('div', { 'class': 'ba-note' }, _('Пакет пока не найден в фиде. Сначала нужно опубликовать новую сборку фида.')) : '',
+				zmLog,
+				E('div', { 'class': 'ba-note' }, [
+					_('Исходный проект'), ' ',
+					E('a', { 'href': 'https://github.com/StressOzz/Zapret-Manager', 'target': '_blank', 'rel': 'noopener' }, 'StressOzz/Zapret-Manager')
+				])
+			]),
 
 			E('div', { 'class': 'ba-card' }, [
 				E('h3', {}, [ 'Hybrid Failover' ].concat(badges)),

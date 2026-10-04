@@ -9,6 +9,7 @@
 # Usage:
 #   be7000-docker status
 #   be7000-docker setup [--data-root /mnt/sda1/docker] [--yes]
+#   be7000-docker firewall [--check]
 #   be7000-docker portainer [--yes]
 
 set -e
@@ -18,11 +19,20 @@ MIN_FREE_MB=1024
 
 die() { echo "$*" >&2; exit 1; }
 
-# messages follow the LuCI language (luci.main.lang): English for en*, else Russian
-EN=0
-case "$(uci -q get luci.main.lang)" in en*) EN=1 ;; esac
-# t <russian> <english>
-t() { [ "$EN" = 1 ] && echo "$2" || echo "$1"; }
+# Messages follow the LuCI language.
+LANG_UI=ru
+case "$(uci -q get luci.main.lang)" in
+	en*) LANG_UI=en ;;
+	zh*) LANG_UI=zh ;;
+esac
+# t <russian> <english> <chinese>
+t() {
+	case "$LANG_UI" in
+		en) echo "$2" ;;
+		zh) echo "$3" ;;
+		*) echo "$1" ;;
+	esac
+}
 
 data_root_now() {
 	uci -q get dockerd.globals.data_root || echo "/opt/docker/"
@@ -32,6 +42,26 @@ free_mb_of() {
 	local path="$1"
 	while [ ! -d "$path" ] && [ "$path" != "/" ]; do path="$(dirname "$path")"; done
 	df -m "$path" 2>/dev/null | awk 'NR==2 { print $4 }'
+}
+
+fs_type_of() {
+	local path="$1"
+	while [ ! -d "$path" ] && [ "$path" != "/" ]; do path="$(dirname "$path")"; done
+	df -T "$path" 2>/dev/null | awk 'NR==2 { print $2 }'
+}
+
+supports_docker_overlay() {
+	local root="$1" test="$1/.be7000-docker-overlay-test.$$"
+	mkdir -p "$test/lower" "$test/upper" "$test/work" "$test/merged" || return 1
+	if mount -t overlay overlay \
+		-o "lowerdir=$test/lower,upperdir=$test/upper,workdir=$test/work" \
+		"$test/merged" 2>/dev/null; then
+		umount "$test/merged" 2>/dev/null || true
+		rm -rf "$test"
+		return 0
+	fi
+	rm -rf "$test"
+	return 1
 }
 
 installed() {
@@ -50,24 +80,176 @@ suggest_data_root() {
 	return 1
 }
 
+# The firewall side. dockerd only adds a "docker" zone that accepts traffic
+# inside itself. fw4 forwards nothing between zones unless told to, so without
+# the two forwardings below a container cannot reach the internet and the LAN
+# cannot reach a published port such as the qBittorrent web interface.
+FW_WAN_SECTION=be7000_docker_wan
+FW_LAN_SECTION=be7000_docker_lan
+
+# a forwarding from zone $1 to zone $2, whoever created it
+fw_has_forwarding() {
+	local i src dest
+	i=0
+	while uci -q get "firewall.@forwarding[$i]" >/dev/null; do
+		src="$(uci -q get "firewall.@forwarding[$i].src")"
+		dest="$(uci -q get "firewall.@forwarding[$i].dest")"
+		[ "$src" = "$1" ] && [ "$dest" = "$2" ] && return 0
+		i=$((i + 1))
+	done
+	return 1
+}
+
+# the zone that masquerades towards the internet, normally "wan"
+fw_wan_zone() {
+	local i name
+	uci -q get firewall.wan >/dev/null 2>&1 && [ "$(uci -q get firewall.wan.name)" = wan ] && { echo wan; return 0; }
+	i=0
+	while uci -q get "firewall.@zone[$i]" >/dev/null; do
+		name="$(uci -q get "firewall.@zone[$i].name")"
+		if [ "$name" = wan ] || [ "$(uci -q get "firewall.@zone[$i].masq")" = 1 ]; then
+			echo "$name"
+			return 0
+		fi
+		i=$((i + 1))
+	done
+	return 1
+}
+
+# section reference of the docker zone, e.g. @zone[3]
+fw_docker_zone_ref() {
+	local i
+	i=0
+	while uci -q get "firewall.@zone[$i]" >/dev/null; do
+		[ "$(uci -q get "firewall.@zone[$i].name")" = docker ] && { echo "@zone[$i]"; return 0; }
+		i=$((i + 1))
+	done
+	return 1
+}
+
+fw_docker_zone_exists() {
+	fw_docker_zone_ref >/dev/null
+}
+
+# The zone only names the netifd interface "docker" (proto none, never up), so
+# fw4 finds no device in it and emits no rule that sends docker0 traffic into
+# the zone: every packet from a container hits the forward chain's drop
+# policy. The bridge has to be named in the zone itself.
+fw_has_device() {
+	local ref
+	ref="$(fw_docker_zone_ref)" || return 1
+	uci -q get "firewall.$ref.device" | tr ' ' '\n' | grep -qx docker0
+}
+
+# Hybrid Failover answers the router's DNS with fake addresses (198.18.x.x) and
+# only steers traffic that comes from its own source interfaces. Newer versions
+# put Docker's bridges among them, so containers are treated like LAN clients
+# and need nothing. An older Hybrid Failover does not, and a container that asks
+# the router for a name gets an address it cannot reach. For that case the
+# containers get plain public resolvers and go out directly.
+hf_present() {
+	[ -x /usr/sbin/hybrid-failover ]
+}
+
+hf_steers_docker() {
+	# the hotplug file comes with the versions that know about Docker (1.7.54
+	# and later); the binary itself is packed, there is nothing to grep in it
+	[ -x /etc/hotplug.d/net/30-hybrid-failover-docker ] &&
+		[ "$(uci -q get hybrid-failover.settings.source_docker)" != 0 ]
+}
+
+dns_ok() {
+	hf_present || return 0
+	hf_steers_docker && return 0
+	[ -n "$(uci -q get dockerd.globals.dns)" ]
+}
+
+fw_ok() {
+	local wan
+	wan="$(fw_wan_zone)" || return 1
+	dns_ok && fw_docker_zone_exists && fw_has_device && fw_has_forwarding docker "$wan" && fw_has_forwarding lan docker
+}
+
+cmd_firewall() {
+	local check="$1" wan restart=0
+
+	if [ "$check" = 1 ]; then
+		fw_ok && echo ok || { echo missing; return 1; }
+		return 0
+	fi
+
+	wan="$(fw_wan_zone)" || die "$(t "В файрволе нет зоны wan, не знаю, куда пускать контейнеры." "There is no wan zone in the firewall, cannot tell where to let the containers out." "防火墙中没有 wan 区域，无法确定容器应从哪里访问外网。")"
+
+	# the zone and the docker network come from dockerd's own init script,
+	# which only does it at boot and only with the daemon stopped
+	# dockerd reads its DNS setting only at start
+	if ! dns_ok; then
+		if [ -x /etc/init.d/dockerd ] && [ "$restart" = 0 ]; then
+			/etc/init.d/dockerd running >/dev/null 2>&1 && { /etc/init.d/dockerd stop; restart=1; trap "/etc/init.d/dockerd start >/dev/null 2>&1" EXIT; }
+		fi
+		uci -q add_list dockerd.globals.dns=77.88.8.8
+		uci -q add_list dockerd.globals.dns=8.8.8.8
+		uci -q commit dockerd
+	fi
+
+	if ! fw_docker_zone_exists; then
+		if [ -x /etc/init.d/dockerd ]; then
+			[ "$restart" = 0 ] && /etc/init.d/dockerd running >/dev/null 2>&1 && { /etc/init.d/dockerd stop; restart=1; trap "/etc/init.d/dockerd start >/dev/null 2>&1" EXIT; }
+			/etc/init.d/dockerd uciadd >/dev/null 2>&1 || true
+		fi
+		fw_docker_zone_exists || die "$(t "Не получилось создать зону docker. Установите Docker: be7000-docker setup" "Could not create the docker zone. Install Docker first: be7000-docker setup" "无法创建 docker 区域。请先安装 Docker: be7000-docker setup")"
+	fi
+
+	if ! fw_has_device; then
+		uci -q add_list "firewall.$(fw_docker_zone_ref).device=docker0"
+	fi
+	if ! fw_has_forwarding docker "$wan"; then
+		uci -q set "firewall.$FW_WAN_SECTION=forwarding"
+		uci -q set "firewall.$FW_WAN_SECTION.name=docker-$wan"
+		uci -q set "firewall.$FW_WAN_SECTION.src=docker"
+		uci -q set "firewall.$FW_WAN_SECTION.dest=$wan"
+	fi
+	if ! fw_has_forwarding lan docker; then
+		uci -q set "firewall.$FW_LAN_SECTION=forwarding"
+		uci -q set "firewall.$FW_LAN_SECTION.name=lan-docker"
+		uci -q set "firewall.$FW_LAN_SECTION.src=lan"
+		uci -q set "firewall.$FW_LAN_SECTION.dest=docker"
+	fi
+	uci -q commit firewall
+	/etc/init.d/firewall reload >/dev/null 2>&1 || true
+	# br_netfilter comes with Docker and switches these on, see
+	# /etc/sysctl.d/99-be7000-bridge-nf.conf
+	sysctl -q -p /etc/sysctl.d/99-be7000-bridge-nf.conf >/dev/null 2>&1 || true
+	if [ "$restart" = 1 ]; then trap - EXIT; /etc/init.d/dockerd start; fi
+
+	t "Файрвол настроен. Контейнеры выходят в интернет через $wan, а из локальной сети открываются опубликованные порты." "Firewall is set. Containers reach the internet through $wan, and published ports open from the local network." "防火墙已设置。容器通过 $wan 访问互联网，局域网可以访问已发布的端口。"
+}
+
 cmd_status() {
 	if installed; then
-		echo "dockerd: $(t "установлен" "installed"), $(dockerd --version 2>/dev/null | head -1)"
+		echo "dockerd: $(t "установлен" "installed" "已安装"), $(dockerd --version 2>/dev/null | head -1)"
 	else
-		echo "dockerd: $(t "не установлен" "not installed")"
+		echo "dockerd: $(t "не установлен" "not installed" "未安装")"
 	fi
 	local dr free
 	dr="$(data_root_now)"
 	free="$(free_mb_of "$dr")"
-	echo "$(t "данные" "data"): $dr"
-	echo "$(t "свободно там: ${free:-?} МБ" "free there: ${free:-?} MB")"
+	echo "$(t "данные" "data" "数据目录"): $dr"
+	echo "$(t "свободно там: ${free:-?} МБ" "free there: ${free:-?} MB" "可用空间: ${free:-?} MB")"
 	if [ -n "$free" ] && [ "$free" -lt "$MIN_FREE_MB" ]; then
 		echo
-		t "Этого мало. Образы докера считаются сотнями мегабайт." "That is not enough. Docker images take hundreds of megabytes."
-		t "Подключите диск и запустите: be7000-docker setup" "Plug in a disk and run: be7000-docker setup"
+		t "Этого мало. Образы докера считаются сотнями мегабайт." "That is not enough. Docker images take hundreds of megabytes." "空间不足。Docker 镜像通常需要几百 MB。"
+		t "Подключите диск и запустите: be7000-docker setup" "Plug in a disk and run: be7000-docker setup" "请连接磁盘并运行: be7000-docker setup"
 	fi
 	echo
-	echo "$(t "служба" "service"): $(/etc/init.d/dockerd status 2>/dev/null || t 'не запущена' 'not running')"
+	echo "$(t "служба" "service" "服务"): $(/etc/init.d/dockerd status 2>/dev/null || t 'не запущена' 'not running' '未运行')"
+	if installed; then
+		if fw_ok; then
+			echo "$(t "файрвол" "firewall" "防火墙"): $(t "контейнеры выходят в интернет" "containers reach the internet" "容器可以访问互联网")"
+		else
+			echo "$(t "файрвол" "firewall" "防火墙"): $(t "контейнеры не выходят в интернет, выполните: be7000-docker firewall" "containers cannot reach the internet, run: be7000-docker firewall" "容器无法访问互联网，请运行: be7000-docker firewall")"
+		fi
+	fi
 }
 
 cmd_setup() {
@@ -78,50 +260,66 @@ cmd_setup() {
 	else
 		dr="$(suggest_data_root)" || die "$(t "Не нашёл подключённого диска со свободным местом от ${MIN_FREE_MB} МБ.
 Подключите диск, смонтируйте его и укажите путь: be7000-docker setup --data-root /mnt/sda1/docker" "No mounted disk with at least ${MIN_FREE_MB} MB free found.
-Plug in a disk, mount it and give the path: be7000-docker setup --data-root /mnt/sda1/docker")"
+Plug in a disk, mount it and give the path: be7000-docker setup --data-root /mnt/sda1/docker" "没有找到至少有 ${MIN_FREE_MB} MB 可用空间的已挂载磁盘。
+请连接并挂载磁盘，然后指定路径: be7000-docker setup --data-root /mnt/sda1/docker")"
 	fi
 
 	free="$(free_mb_of "$dr")"
-	[ -n "$free" ] || die "$(t "Не удалось определить свободное место для $dr" "Could not find out the free space for $dr")"
+	[ -n "$free" ] || die "$(t "Не удалось определить свободное место для $dr" "Could not find out the free space for $dr" "无法确定 $dr 的可用空间")"
 	if [ "$free" -lt "$MIN_FREE_MB" ]; then
-		t "Свободно всего ${free} МБ, это мало для докера." "Only ${free} MB free, that is not enough for Docker." >&2
-		[ "$yes" = 1 ] || die "$(t "Если уверены, повторите с --yes" "If you are sure, repeat with --yes")"
+		t "Свободно всего ${free} МБ, это мало для докера." "Only ${free} MB free, that is not enough for Docker." "只有 ${free} MB 可用空间，不足以运行 Docker。" >&2
+		[ "$yes" = 1 ] || die "$(t "Если уверены, повторите с --yes" "If you are sure, repeat with --yes" "如果确定要继续，请加上 --yes 再次运行")"
 	fi
 
 	if [ "$yes" != 1 ]; then
-		echo "$(t "Поставлю" "Will install"): $PKGS"
-		t "Данные докера будут лежать в: $dr (свободно ${free} МБ)" "Docker data will live in: $dr (${free} MB free)"
-		t "Повторите с --yes, чтобы выполнить." "Repeat with --yes to do it."
+		echo "$(t "Поставлю" "Will install" "将安装"): $PKGS"
+		t "Данные докера будут лежать в: $dr (свободно ${free} МБ)" "Docker data will live in: $dr (${free} MB free)" "Docker 数据将保存到: $dr，剩余 ${free} MB"
+		t "Повторите с --yes, чтобы выполнить." "Repeat with --yes to do it." "请加上 --yes 再次运行以开始安装。"
 		exit 1
 	fi
 
 	if ! installed; then
-		t "Ставлю пакеты" "Installing packages"
+		t "Ставлю пакеты" "Installing packages" "正在安装软件包"
 		apk update >/dev/null 2>&1 || true
 		# shellcheck disable=SC2086
-		apk add $PKGS || die "$(t "Не удалось поставить пакеты. Проверьте apk update." "Could not install the packages. Check apk update.")"
+		apk add $PKGS || die "$(t "Не удалось поставить пакеты. Проверьте apk update." "Could not install the packages. Check apk update." "软件包安装失败。请检查 apk update。")"
 	fi
 
+	# Dockerman's own texts; not fatal when the feed does not have them yet
+	apk add luci-i18n-dockerman-ru luci-i18n-dockerman-zh-cn >/dev/null 2>&1 || true
+
 	mkdir -p "$dr"
-	t "Прописываю data-root" "Setting data-root"
+	local fs
+	fs="$(fs_type_of "$dr")"
+	if ! supports_docker_overlay "$dr"; then
+		die "$(t "Файловая система ${fs:-неизвестна} в $dr не поддерживает слои Docker.
+Используйте раздел ext4 или каталог внутри /overlay, если /overlay уже перенесён на USB-диск." "The ${fs:-unknown} filesystem at $dr cannot hold Docker layers.
+Use an ext4 partition or a directory under /overlay if /overlay has already been moved to a USB drive." "$dr 所在的文件系统（${fs:-未知}）不支持 Docker 分层存储。
+请使用 ext4 分区。如果 /overlay 已经迁移到 USB 磁盘，也可以使用 /overlay 下的目录。")"
+	fi
+	t "Прописываю data-root" "Setting data-root" "正在设置 data-root"
 	uci -q set dockerd.globals.data_root="$dr"
 	uci -q commit dockerd
 
 	/etc/init.d/dockerd enable >/dev/null 2>&1 || true
-	/etc/init.d/dockerd restart
+	/etc/init.d/dockerd stop >/dev/null 2>&1 || true
+	trap "/etc/init.d/dockerd start >/dev/null 2>&1" EXIT
+	cmd_firewall 0 || true
+	trap - EXIT
+	/etc/init.d/dockerd start
 
 	echo
-	t "Готово. Управление в LuCI: Сервисы, Dockerman." "Done. Manage it in LuCI: Services, Dockerman."
-	t "Там контейнеры, образы, сети, тома, логи и консоль внутрь контейнера." "Containers, images, networks, volumes, logs and a console into containers are there."
+	t "Готово. Управление в LuCI: Сервисы, Dockerman." "Done. Manage it in LuCI: Services, Dockerman." "完成。请在 LuCI 的 服务, Dockerman 中管理 Docker。"
+	t "Там контейнеры, образы, сети, тома, логи и консоль внутрь контейнера." "Containers, images, networks, volumes, logs and a console into containers are there." "其中可以管理容器、镜像、网络、卷、日志和容器终端。"
 }
 
 cmd_portainer() {
 	local yes="$1"
-	installed || die "$(t "Сначала be7000-docker setup" "Run be7000-docker setup first")"
+	installed || die "$(t "Сначала be7000-docker setup" "Run be7000-docker setup first" "请先运行 be7000-docker setup")"
 	if [ "$yes" != 1 ]; then
-		t "Запущу Portainer CE контейнером, веб-интерфейс на порту 9443 по https." "Will start Portainer CE as a container, web interface on port 9443 over https."
-		t "Это отдельный интерфейс поверх докера, со стеками и compose." "It is a separate interface on top of Docker, with stacks and compose."
-		t "Повторите с --yes." "Repeat with --yes."
+		t "Запущу Portainer CE контейнером, веб-интерфейс на порту 9443 по https." "Will start Portainer CE as a container, web interface on port 9443 over https." "将以容器方式启动 Portainer CE，HTTPS 管理页面使用 9443 端口。"
+		t "Это отдельный интерфейс поверх докера, со стеками и compose." "It is a separate interface on top of Docker, with stacks and compose." "这是独立的 Docker 管理界面，支持 stacks 和 compose。"
+		t "Повторите с --yes." "Repeat with --yes." "请加上 --yes 再次运行。"
 		exit 1
 	fi
 	docker volume create portainer_data >/dev/null
@@ -130,27 +328,42 @@ cmd_portainer() {
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v portainer_data:/data \
 		portainer/portainer-ce:latest
-	t "Portainer поднят. Откройте https://<адрес роутера>:9443 и задайте пароль." "Portainer is up. Open https://<router address>:9443 and set a password."
+	t "Portainer поднят. Откройте https://<адрес роутера>:9443 и задайте пароль." "Portainer is up. Open https://<router address>:9443 and set a password." "Portainer 已启动。请打开 https://<路由器地址>:9443 并设置密码。"
 }
 
 ACTION="$1"
 [ $# -gt 0 ] && shift
-YES=0; DR=""
+YES=0; DR=""; CHECK=0
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--yes) YES=1 ;;
+	--check) CHECK=1 ;;
 	--data-root) shift; DR="$1" ;;
 	*) ;;
 	esac
 	shift
 done
 
+# Everything needed to see why a container has no network, in one paste
+cmd_diag() {
+	echo "== release"; grep -E '^(VERSION|KERNEL)=' /etc/be7000-release 2>/dev/null
+	echo "== firewall (docker, wan)"; uci -q show firewall | grep -E "docker|zone.*wan|\.wan\b|forwarding" | head -60
+	echo "== ip_forward"; cat /proc/sys/net/ipv4/ip_forward
+	echo "== interfaces"; ip -br a 2>/dev/null | grep -E "docker|br-|veth"
+	echo "== nft docker"; nft list ruleset 2>/dev/null | grep -n -i docker | head -40
+	echo "== iptables"; iptables -V 2>&1 | head -1; iptables -S FORWARD 2>&1 | head -20
+	echo "== dockerd"; /etc/init.d/dockerd running >/dev/null 2>&1 && echo running || echo stopped
+	logread 2>/dev/null | grep -iE "dockerd|docker" | tail -15
+}
+
 case "$ACTION" in
+diag)      cmd_diag ;;
 status)    cmd_status ;;
 setup)     cmd_setup "$DR" "$YES" ;;
 portainer) cmd_portainer "$YES" ;;
+firewall)  cmd_firewall "$CHECK" ;;
 *)
-	echo "usage: be7000-docker {status|setup [--data-root PATH] [--yes]|portainer [--yes]}"
+	echo "usage: be7000-docker {status|setup [--data-root PATH] [--yes]|portainer [--yes]|firewall [--check]|diag}"
 	exit 1
 	;;
 esac

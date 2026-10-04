@@ -1,4 +1,4 @@
-Beam WRT 1.4.0 for the Xiaomi BE7000
+Beam WRT 1.4 for the Xiaomi BE7000
 
 This is firmware based on OpenWrt with kernel 6.18. The instructions come in parts, read the one that fits your case.
 
@@ -6,7 +6,7 @@ This is firmware based on OpenWrt with kernel 6.18. The instructions come in par
 First install, the router runs the Xiaomi factory firmware now. Backup, installation and first login.
 
 2-update-en.txt
-Beam WRT is already installed and you want a newer version. If you update to 1.4.0 from any 1.x version, read the first section of this file before anything else. After it comes the regular update and what to do with a very old version, from 1.0 up to 1.2.2.
+Beam WRT is already installed and you want a newer version. If you update to 1.4 from any 1.x version, read the first section of this file before anything else. After it comes the regular update and what to do with a very old version, from 1.0 up to 1.2.2.
 
 3-rollback-and-problems-en.txt
 The router does not answer, does not boot, has no wired network, or you want to go back to the factory firmware. Going back now also works with a button on System, Slots. The file also tells how to collect a log and what to post.

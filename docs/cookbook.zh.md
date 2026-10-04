@@ -59,6 +59,42 @@ be7000-docker setup
 
 脚本会找到一个已挂载且有空闲空间的硬盘，把 Docker 数据移过去。它还会安装 Dockerman，也就是管理容器、镜像和网络的页面。现成的容器组合在 "服务, Docker 堆栈" 里启动。
 
+### 容器无法上网
+
+如果 qBittorrent 什么也下载不了，其他容器连不上网，或者容器的网页界面无法从局域网打开，原因在防火墙。Docker 会为自己的容器建立单独的 docker 区域，而路由器的防火墙默认不会在区域之间转发任何流量。需要两条转发规则，从 docker 到 wan 让容器访问互联网，从 lan 到 docker 让局域网访问已发布的端口。此外还必须在该区域中写明 docker0 网桥。否则防火墙不会把容器的数据包交给这个区域，即使两条转发规则都在，也会被丢弃。用户网络和堆栈使用的网桥会自动加入该区域。
+
+用 be7000-docker setup 安装时会自动设置好。如果 Docker 是之前装的，请运行下面的命令，或者在 "服务, Docker 堆栈" 页面点击 "允许" 按钮。
+
+```
+be7000-docker firewall
+```
+
+手动设置的方法如下，在任何版本上都可以使用。docker 区域必须已经存在，也就是说 Docker 至少启动过一次。
+
+```
+uci set firewall.docker_wan=forwarding
+uci set firewall.docker_wan.src='docker'
+uci set firewall.docker_wan.dest='wan'
+uci set firewall.docker_lan=forwarding
+uci set firewall.docker_lan.src='lan'
+uci set firewall.docker_lan.dest='docker'
+uci add_list firewall.docker.device='docker0'
+uci commit firewall
+/etc/init.d/firewall restart
+```
+
+如果转发规则已经有了，但 `uci show firewall` 里看不到 docker 区域，请停止 Docker，然后用标准命令创建它。
+
+```
+/etc/init.d/dockerd stop
+/etc/init.d/dockerd uciadd
+/etc/init.d/dockerd start
+```
+
+如果容器仍然没有网络，`be7000-docker diag` 会输出防火墙区域和规则、网络接口以及 dockerd 的状态。把输出附在问题报告里会很方便。
+
+最新版本的 Hybrid Failover 会像对待网络中的其他设备一样处理容器，并自动识别 Docker 网桥。如果是旧版本，`be7000-docker firewall` 会为容器设置公共 DNS 服务器，否则容器会从路由器拿到 Hybrid Failover 的内部地址而无法连接。没有 Hybrid Failover 时不会改动 DNS。
+
 ## 5 GHz 模式
 
 模式在 "网络, 无线" 页面顶部的 "5 GHz 模式" 区域选择。切换模式时路由器不会重启，5 GHz Wi-Fi 会断开大约半分钟。
@@ -105,7 +141,7 @@ be7000-stock-import undo
 
 ## 硬件加速
 
-加速在 "网络, 硬件加速" 里开启。PPE 网络引擎可以接管 NAT 和路由，也可以接管 LAN 口的网桥。这个功能还在试验阶段，默认关闭。页面上说明了哪些流量会被加速，以及它和哪些功能不能一起用，比如 SQM。
+加速在 "网络, 硬件加速" 里开启。PPE 网络引擎可以接管 NAT 和路由，也可以接管 LAN 口的网桥。这个功能已经测试过并能正常工作，默认关闭。页面上说明了哪些流量会被加速，以及它和哪些功能不能一起用，比如 SQM。
 
 在命令行里这样开启。
 
@@ -123,11 +159,11 @@ grep -c HW_OFFLOAD /proc/net/nf_conntrack
 
 ## 更新
 
-"系统, 固件更新" 会检查新版本，一键安装。设置会保留。在命令行里这样做。
+路由器每天会自己向 GitHub 查询是否有新版本。有新版本时，"状态, 概览" 页面会出现提示块，Nimbus 主题的顶部栏会出现一个按钮。可以在 "系统, 固件更新" 页面关闭这项检查，新版本也在这里一键安装。设置会保留。在命令行里这样做。
 
 ```
 be7000-update check     # 有没有新版本
 be7000-update apply     # 下载、校验并安装
 ```
 
-你装过的软件包会在更新后、路由器联网时为新内核重新安装。如果你是从 1.x 更新到 1.4.0，请先读 docs/instruction/2-update-zh.txt 开头关于这次更新的部分。这个文件在发布压缩包里也有。
+你装过的软件包会在更新后、路由器联网时为新内核重新安装。如果你是从 1.x 更新到 1.4，请先读 docs/instruction/2-update-zh.txt 开头关于这次更新的部分。这个文件在发布压缩包里也有。

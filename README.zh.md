@@ -9,11 +9,11 @@
 
 Beam WRT 是给 Xiaomi BE7000 (RC06 主板，IPQ9554 处理器) 用的新版 OpenWrt，取自 main 分支，内核 6.18，不用 kexec。1.3.1 之前这个固件就叫 be7000-openwrt，和仓库同名。系统直接从闪存启动，原厂固件留在另一个槽位里，随时都可以切回去。
 
-**固件能做什么，1.4.0 有哪些新东西，和别的固件有什么区别，都写在 [features.zh.md](docs/features.zh.md) 里。**
+**固件能做什么，1.4 有哪些新东西，和别的固件有什么区别，都写在 [features.zh.md](docs/features.zh.md) 里。**
 
 从 1.4.0 开始，固件基于 OpenWrt main (提交 d958caf，2026 年 9 月 29 日)，上面叠加 kravasuper 的移植，放在 patches/port 里作为补丁系列。1.4.0 之前用的是 kravasuper 的 xiaomi_be7000 分支，提交 790d036a。在这个基础上我修了以太网驱动，不修的话我这块板子上的系统连网络都起不来 ([patches.zh.md](docs/patches.zh.md))。另外还加了一组服务，让双槽位和原厂引导程序的行为变得可预期。
 
-当前版本是 **1.4.0**。镜像在 [Releases](../../releases) 里，校验和在 sha256sums.txt 里。安装方法见 [安装、更新和回滚](#安装更新和回滚) 一节。
+当前版本是 **1.4.4**。镜像在 [Releases](../../releases) 里，校验和在 sha256sums.txt 里。安装方法见 [安装、更新和回滚](#安装更新和回滚) 一节。
 
 ## 目录
 
@@ -37,15 +37,15 @@ Beam WRT 是给 Xiaomi BE7000 (RC06 主板，IPQ9554 处理器) 用的新版 Ope
 - 2.4 和 5 GHz Wi-Fi 以 Wi-Fi 6 模式工作，能读到 ART 分区里的校准数据，5 GHz 的 TLMM6 和 TLMM7 修正已经生效。
 - 接入点模式下的 Wi-Fi 7 (EHT80) 能用，用笔记本测过。macOS 显示 PHY Mode 802.11be，36 信道 80 MHz，iperf3 945 Mbit/s。5 GHz 自动选信道也正常。
 - 国家代码设成 RU 时，QCN9274 的射频固件自己会禁用 802.11be (`iw reg get` 里能看到 NO-EHT)，接入点就按 Wi-Fi 6 工作。这是射频固件的决定，不是驱动的问题。从 1.4.0 开始，5 GHz 模式块里会提示这一点，旁边有个按钮，只给 5 GHz 设成 US。
-- MLO 模式几秒钟就能起来，低频段射频在 36 信道 160 MHz，高频段射频在 149 信道 80 MHz。Wi-Fi 7 笔记本连上这种网络时只用一条链路，一台设备上两条链路叠加还没测过。
+- MLO 模式几秒钟就能起来，低频段射频在 36 信道 160 MHz，高频段射频在 149 信道 80 MHz。MLO 已经测试过，能正常工作。Wi-Fi 7 笔记本连上这种网络时只用一条链路，一台设备上两条链路叠加没有测过，目前没有条件做这项测试。
 - 真实线路上的 PPPoE、保留设置和已启用服务列表的 sysupgrade、WireGuard 和 AmneziaWG (模块和 awg 工具都是按这个内核编译的)。
 
 ## 已知问题
 
 - **1.3.0 之前部分板子上的以太网问题。** 网口有连接，但路由器一帧都收不到。原因是内核通过 RPM 请求了 l2 稳压器，1.3.0 已经修好，详情见 [patches.zh.md](docs/patches.zh.md)。如果你的板子上网线还是不通，请到 [issue #1](https://github.com/timofey-maykov/be7000-openwrt/issues/1) 或 4PDA 帖子里反馈。可以先通过 Wi-Fi 连进去 (网络 OpenWrt-BE7000，密码 be7000openwrt)。
 - 在双射频和 MLO 模式下，每个射频只分到一半天线，所以单台设备的速度比单射频模式慢。模式在 网络, 无线 页面上选，或者用 be7000-5g-split mode 命令切换，详情见 [patches.zh.md](docs/patches.zh.md)。
-- /overlay 只有 19.4 MB 空间。要装大东西，最好用 be7000-extroot 命令把它搬到 USB 上。
-- 内核用的是主线的 qcom-ppe，不是厂商的 NSS。PPE 上的硬件 NAT 加速在 1.4.0 里加上了，但还是实验功能，默认关闭。Wi-Fi 客户端的数据包仍然要经过一次 CPU。
+- /overlay 只有大约 20 MB 空间。要装大东西，最好用 be7000-extroot 命令把它搬到 USB 上。
+- 内核用的是主线的 qcom-ppe，不是厂商的 NSS。PPE 上的硬件 NAT 加速在 1.4.0 里加上了，已经测试过并能正常工作，默认关闭。Wi-Fi 客户端的数据包仍然要经过一次 CPU。
 - 这个移植落后于 OpenWrt main，更新基础版本时可能需要重做补丁。
 
 ## 安装、更新和回滚
@@ -57,7 +57,7 @@ Beam WRT 是给 Xiaomi BE7000 (RC06 主板，IPQ9554 处理器) 用的新版 Ope
 - [回滚到原厂固件，以及出问题时怎么办](docs/instruction/3-rollback-and-problems-zh.txt)
 - [固件功能](docs/instruction/4-features-zh.txt)，软件包、5 GHz 模式和 MLO、导入原厂设置、槽位、硬件加速、USB 存储、Docker
 
-如果从任何 1.x 版本更新到 1.4.0，请先读更新文件的第一节。
+如果从任何 1.x 版本更新到 1.4，请先读更新文件的第一节。
 
 无论如何都不要动引导程序 (0:APPSBL 和 0:APPSBL_1)，这是唯一能把板子彻底搞坏的地方。
 
@@ -83,6 +83,9 @@ OpenWrt main r20260929-d958caf，内核 6.18.52，Wi-Fi 驱动来自 backports 7
 | be7000-extroot | 把 /overlay 搬到 USB 磁盘上，更新后也留在那里 |
 | be7000-ppe | 在模块加载前，把 PPE 网桥加速的选择写进模块参数 |
 | be7000-slots | 显示各个槽位里装的是什么，切换启动槽位，对应 系统, 槽位 页面 |
+| be7000-docker | 把 Docker 安装到磁盘，并为容器设置防火墙和 DNS，命令有 setup、firewall、diag |
+| be7000-update | 检查并安装新版本，每天提示一次是否有新版本发布 |
+| be7000-leds | 指示灯的状态触发器，LED 配置页面中的 状态（Beam WRT），以及琥珀色 2.4 GHz Wi-Fi 指示灯 |
 
 软件包开箱即可安装。官方镜像站给 qualcommbe 编译的是 cortex-a53，而这个固件的目标是 cortex-a73，所以镜像站上没有 aarch64_cortex-a73 目录，所有常用软件源都返回 404。镜像里配好了自己的软件源，用同一套源码树编译，签名用的密钥镜像本身已经信任。执行 `apk update` 之后有 600 多个软件包可装，包括 nano、htop、tcpdump、strace、tmux、rsync、jq、带 USB 调制解调器驱动的 modemmanager、ksmbd 和 ttyd。内核模块放在单独的软件源里，因为镜像站上的模块是给别的内核编译的。还有一个单独的软件源放 hybrid-failover，每次发布新版本它都会自己重新编译。
 

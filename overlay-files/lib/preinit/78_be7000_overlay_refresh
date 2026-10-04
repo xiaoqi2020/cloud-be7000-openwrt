@@ -145,7 +145,9 @@ be7000_overlay_refresh_test() {
 			mkdir -p "$d/upper" "$d/work"
 			be7000_test_copy "$c/upper" "$d/upper"
 			# run on this copy, not on the shared volume
-			[ -f "$d/upper/etc/config/fstab" ] && sed -i "/^config mount 'bigoverlay'/,/^$/ s/option enabled '1'/option enabled '0'/" "$d/upper/etc/config/fstab"
+			# nor on the USB disk the working firmware keeps its /overlay on: the
+			# copy still names it as extroot, and the test image mounts no disk
+			[ -f "$d/upper/etc/config/fstab" ] && sed -i -e "/^config mount 'bigoverlay'/,/^$/ s/option enabled '1'/option enabled '0'/" -e "/^config mount 'extroot'/,/^$/ s/option enabled '1'/option enabled '0'/" -e "/^config mount 'usbdata'/,/^$/ s/option enabled '1'/option enabled '0'/" -e "s/option auto_mount '1'/option auto_mount '0'/" "$d/upper/etc/config/fstab"
 			: > "$d/.be7000_test_copy"
 			# fstools wipes a volume that is not marked ready (FS_STATE_READY = 2)
 			rm -f "$d/.fs_state"

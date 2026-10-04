@@ -362,6 +362,7 @@ kbd {
 .nb-theme svg,
 .nb-logout svg,
 .nb-crumbs svg,
+.nb-update svg,
 .nb-palette svg {
 	width: 18px;
 	height: 18px;
@@ -612,6 +613,30 @@ kbd {
 }
 
 .nb-icon-btn:hover { color: var(--nb-text); border-color: var(--nb-border-strong); }
+
+.nb-update {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 38px;
+	padding: 0 12px;
+	border-radius: 10px;
+	border: 1px solid var(--nb-accent);
+	background: color-mix(in srgb, var(--nb-accent) 12%, transparent);
+	color: var(--nb-accent-strong);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.nb-update svg { width: 16px; height: 16px; }
+.nb-update:hover { background: color-mix(in srgb, var(--nb-accent) 22%, transparent); }
+
+@media (max-width: 600px) {
+	.nb-update span { display: none; }
+	.nb-update { padding: 0 10px; }
+}
 
 .nb-nav-toggle,
 .nb-search-mini { display: none; }
@@ -1907,6 +1932,12 @@ input[type="reset"]:hover {
 #cbi-dhcp-__leases6__ .td,
 .table.leases .td,
 .table.leases6 .td { overflow-wrap: anywhere; }
+/* Dockerman overview: values like the Plugins JSON string have no spaces and
+   pushed the table out of its card */
+#cbi-json-vb .td:last-child,
+#cbi-json-ib .td:last-child { overflow-wrap: anywhere; }
+#cbi-json-vb .td:first-child,
+#cbi-json-ib .td:first-child { white-space: nowrap; }
 
 .table .tr:not(.table-titles):not(.cbi-section-table-titles) > .td:first-child { padding-left: 4px; }
 .table .tr > .th:first-child { padding-left: 4px; }

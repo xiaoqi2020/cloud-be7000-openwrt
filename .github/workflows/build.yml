@@ -119,6 +119,8 @@ jobs:
             debug-*) cp -a ../repo/overlay-files-debug/. files/; echo "debug overlay added" ;;
           esac
           cp -a ../repo/awg-feed .
+          cp -a ../repo/awg-proto-feed .
+          cp -a ../repo/beam-apps-feed .
           # the LuCI theme lives in this repo, not in any feed
           cp -a ../repo/luci-theme-nimbus package/
 
@@ -146,6 +148,11 @@ jobs:
             [ -n "$name" ] || continue
             sed -i -E "s|^(src-git(-full)? $name [^ ^;]+).*$|\1^$rev|" feeds.conf.default
           done < ../repo/feeds-pins.txt
+          while read -r name url rev _; do
+            [ -n "$name" ] || continue
+            case "$name" in \#*) continue ;; esac
+            echo "src-git $name $url^$rev" >> feeds.conf.default
+          done < ../repo/feeds-extra.conf
           echo "=== feeds.conf.default ==="
           cat feeds.conf.default
           for name in $(cut -d" " -f1 ../repo/feeds-pins.txt); do
@@ -156,7 +163,20 @@ jobs:
             echo "::error::unpinned feed in feeds.conf.default, add it to feeds-pins.txt"; exit 1
           fi
           grep -q '^src-link awg ' feeds.conf.default || echo "src-link awg $PWD/awg-feed" >> feeds.conf.default
+          grep -q '^src-link awgproto ' feeds.conf.default || echo "src-link awgproto $PWD/awg-proto-feed" >> feeds.conf.default
+          grep -q '^src-link beamextras ' feeds.conf.default || echo "src-link beamextras $PWD/beam-apps-feed" >> feeds.conf.default
           ./scripts/feeds update -a
+          # ByeDPI keeps the release version as a workflow placeholder in its
+          # package recipe. The source is pinned above, so use the tag recorded
+          # by that exact checkout instead of asking GitHub during the build.
+          byedpi_ver=$(sed 's/^v//' feeds/byedpi/.last_release_tag)
+          sed -i "s/PKG_VERSION:=@VERSION@/PKG_VERSION:=$byedpi_ver/" feeds/byedpi/byedpi/Makefile
+          # Current NetShift calls BuildPackage a second time after luci.mk
+          # already did it. OpenWrt then generates two Kconfig entries with a
+          # dependency on themselves.
+          sed -i 's/^\$(eval \$(call BuildPackage,\$(PKG_NAME)))$/# call BuildPackage - OpenWrt buildroot signature/' feeds/netshift/luci-app-netshift/Makefile
+          rm -rf feeds/netshift.tmp
+          ./scripts/feeds update -i netshift
           ./scripts/feeds install -a
 
       - name: Configure
@@ -311,7 +331,7 @@ jobs:
             "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" pages
           cd pages
           # feed/$ARCH/ (no base) is the frozen feed of the 1.3.x images
-          for d in awg base luci packages; do
+          for d in awg awgproto beamextras base byedpi luci netshift packages zapret zapret2; do
             [ -d "../owrt/bin/packages/$ARCH/$d" ] || continue
             mkdir -p "feed/$FEED_BASE/$ARCH/$d"
             rsync -a --delete "../owrt/bin/packages/$ARCH/$d/" "feed/$FEED_BASE/$ARCH/$d/"

@@ -1,0 +1,31 @@
+#!/bin/sh
+# Docker bridges made for user networks and compose stacks (br-<12 hex>) are
+# unknown to netifd, so fw4 sends nothing from them into the docker zone and
+# the containers get no network. Keep them listed in the zone as they come and
+# go. The default bridge docker0 is added by be7000-docker firewall.
+case "$INTERFACE" in
+br-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+*) exit 0 ;;
+esac
+[ "$ACTION" = add ] || [ "$ACTION" = remove ] || exit 0
+
+i=0
+ref=""
+while uci -q get "firewall.@zone[$i]" >/dev/null; do
+	[ "$(uci -q get "firewall.@zone[$i].name")" = docker ] && { ref="@zone[$i]"; break; }
+	i=$((i + 1))
+done
+[ -n "$ref" ] || exit 0
+
+has=0
+uci -q get "firewall.$ref.device" | tr ' ' '\n' | grep -qx "$INTERFACE" && has=1
+
+if [ "$ACTION" = add ] && [ $has = 0 ]; then
+	uci -q add_list "firewall.$ref.device=$INTERFACE"
+elif [ "$ACTION" = remove ] && [ $has = 1 ]; then
+	uci -q del_list "firewall.$ref.device=$INTERFACE"
+else
+	exit 0
+fi
+uci -q commit firewall
+/etc/init.d/firewall reload >/dev/null 2>&1

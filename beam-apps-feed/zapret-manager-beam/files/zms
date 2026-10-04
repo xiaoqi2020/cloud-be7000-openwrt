@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /bin/bash /usr/share/zapret-manager-beam/Zapret-Manager.sh "$@"

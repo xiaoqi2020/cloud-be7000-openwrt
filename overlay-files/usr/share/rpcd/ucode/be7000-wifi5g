@@ -5,6 +5,7 @@ import { cursor } from 'uci';
 
 const BIN = '/usr/sbin/be7000-5g-split';
 const LOG = '/tmp/be7000-5g-split.log';
+const RUN = '/tmp/be7000-5g-split.running';
 const PARAM = '/sys/module/ath12k/parameters/board_id';
 
 function sh(cmd) {
@@ -44,7 +45,7 @@ return {
 	'be7000-wifi5g': {
 		status: {
 			call: function() {
-				let running = sh('ps w | grep -q "[b]e7000-5g-split \\(o[nf]\\|mode [a-z]\\)" && echo 1') == '1';
+				let running = access(RUN) == true || sh('ps w | grep -q "[b]e7000-5g-split \\(o[nf]\\|mode [a-z]\\)" && echo 1') == '1';
 				let mode = sh(`${BIN} mode`);
 				return {
 					available: access(BIN) == true && access(PARAM) == true,
@@ -88,10 +89,11 @@ return {
 				let mode = req.args?.mode;
 				if (index([ 'single', 'split', 'mlo' ], mode) < 0)
 					mode = req.args?.split ? 'split' : 'single';
-				// takes 20-90 s (firmware reload, wifi reload, MLO check): run
+				// takes 20-480 s (firmware reload, wifi reload, MLO check): run
 				// it detached and let the page poll status
 				// a switch that hangs somewhere must not leave the page waiting forever
-				sh(`(timeout 300 ${BIN} mode ${mode} || echo "switch stopped or failed, rc $?") >${LOG} 2>&1 </dev/null &`);
+				sh(`touch ${RUN}`);
+				sh(`(timeout 480 ${BIN} mode ${mode}; rc=$?; [ "$rc" -eq 0 ] || echo "switch stopped or failed, rc $rc"; rm -f ${RUN}) >${LOG} 2>&1 </dev/null &`);
 				return { ok: true, mode };
 			}
 		}

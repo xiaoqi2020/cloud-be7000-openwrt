@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs once after the package is installed and after an upgrade to an image
+# that contains it. The rc.d links do not survive sysupgrade, so enable here.
+/etc/init.d/be7000-update-check enable
+/etc/init.d/be7000-update-check restart >/dev/null 2>&1
+exit 0

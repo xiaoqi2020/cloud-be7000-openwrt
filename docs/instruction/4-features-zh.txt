@@ -47,7 +47,7 @@ be7000-5g-split mode single
 
 硬件加速
 
-这是实验性功能，默认关闭。在 网络, 硬件加速 里打开。
+这个功能已经测试过并能正常工作，默认关闭。在 网络, 硬件加速 里打开。
 
 路由和 NAT 可以交给单独的网络引擎 PPE 处理，不占用主 CPU。有线 LAN 口之间的桥接也可以交给它。页面上说明了哪些流量会被加速，它和哪些功能不能同时使用，比如 SQM，以及出问题时怎样在命令行里关掉它。
 
@@ -72,9 +72,11 @@ be7000-docker status
 be7000-docker setup --yes
 be7000-docker setup --data-root /mnt/usb/docker --yes
 
-不带参数时，命令会寻找已挂载、至少有 1 GB 空闲空间的硬盘。Docker 在这款路由器上还没有经过实际使用的测试。
+不带参数时，命令会寻找已挂载、至少有 1 GB 空闲空间的硬盘。Docker 已在这款路由器上测试过：可以安装，容器能访问互联网，容器端口可以从局域网打开。
 
 容器、镜像、网络和卷在 服务, Dockerman 里管理。docker-compose 堆栈、一键安装的现成组合以及清理功能在 服务, "Docker 堆栈" 里。现成组合有 Portainer、AdGuard Home、Uptime Kuma、Vaultwarden、qBittorrent、Nginx Proxy Manager、Home Assistant 和 Watchtower。
+
+如果容器无法访问互联网，或者容器的网页界面无法从局域网打开，需要让防火墙允许从 docker 区域转发。be7000-docker setup 命令会自动做到这一点。对于之前已经装好的 Docker，可以运行 be7000-docker firewall 命令，或者点击 "服务, Docker 堆栈" 页面上的按钮。详细说明见 docs/cookbook.zh.md 的 "容器无法上网" 一节。 如果这样之后容器仍然没有网络，be7000-docker diag 会一次性输出排查所需的全部信息。
 
 
 其他功能

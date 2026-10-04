@@ -5,6 +5,8 @@
 
 var callStatus = rpc.declare({ object: 'be7000-docker', method: 'status' });
 var callDf = rpc.declare({ object: 'be7000-docker', method: 'df' });
+var callFwStatus = rpc.declare({ object: 'be7000-docker', method: 'firewall_status' });
+var callFwFix = rpc.declare({ object: 'be7000-docker', method: 'firewall_fix' });
 var callPrune = rpc.declare({ object: 'be7000-docker', method: 'prune', params: ['what'] });
 var callStacks = rpc.declare({ object: 'be7000-docker', method: 'stacks' });
 var callRead = rpc.declare({ object: 'be7000-docker', method: 'stack_read', params: ['name'] });
@@ -92,7 +94,8 @@ return view.extend({
 	load: function() {
 		return Promise.all([
 			callStatus().catch(function() { return {}; }),
-			callStacks().catch(function() { return {}; })
+			callStacks().catch(function() { return {}; }),
+			callFwStatus().catch(function() { return {}; })
 		]);
 	},
 
@@ -158,6 +161,7 @@ return view.extend({
 		var self = this;
 		var st = (data[0] && data[0].data) || {};
 		var stacks = (data[1] && data[1].data) || [];
+		var fw = (data[2] && data[2].data) || {};
 
 		var head = [];
 		if (!st.installed) {
@@ -171,6 +175,16 @@ return view.extend({
 		}
 		else {
 			head.push(E('p', {}, _('Docker %s работает. Контейнеры, образы, сети и тома по отдельности живут в разделе Сервисы, Dockerman.').format(st.version)));
+			if (fw.configured === false)
+				head.push(E('div', { 'class': 'alert-message warning' }, [
+					E('p', {}, _('Контейнеры сейчас не выходят в интернет, и опубликованные порты, например веб-интерфейс qBittorrent, не открываются из локальной сети. Файрволу роутера нужно разрешить пересылку между зоной docker, интернетом и локальной сетью.')),
+					E('button', {
+						'class': 'cbi-button cbi-button-action important',
+						'click': ui.createHandlerFn(self, function() {
+							return busy(_('Настраиваю файрвол'), callFwFix(), function() { window.setTimeout(function() { window.location.reload(); }, 2500); });
+						})
+					}, _('Разрешить'))
+				]));
 		}
 
 		var table = E('table', { 'class': 'table' }, [
@@ -267,6 +281,45 @@ return view.extend({
 					if (confirm(_('Удалить тома, которые ни к чему не подключены? Данные в них пропадут.')))
 						busy(_('Чищу тома'), callPrune('volumes'));
 				} }, _('Удалить неподключённые тома'))
+			]),
+
+			self.about()
+		]);
+	},
+
+	about: function() {
+		return E('div', { 'style': 'max-width:860px;margin-top:8px' }, [
+			E('h3', {}, _('Как это устроено')),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Что такое Docker и зачем он на роутере')),
+			E('p', {}, _('Docker запускает программы в изолированных контейнерах. В контейнере уже лежит всё нужное для программы, поэтому её не нужно собирать под роутер, и она не мешает системе. Так на роутере работают, например, AdGuard Home, Home Assistant, торрент-клиент, менеджер паролей и многое другое.')),
+			E('p', {}, _('Контейнеры ставятся из готовых образов. Набор контейнеров, который запускается вместе, описывается одним файлом docker-compose.yml. Такой набор здесь называется стеком.')),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Что понадобится')),
+			E('ul', { 'style': 'margin:4px 0 8px 18px' }, [
+				E('li', {}, _('USB-диск или SSD с файловой системой ext4 и хотя бы гигабайтом свободного места. Образы занимают сотни мегабайт, а во внутренней памяти роутера около 19 МБ, поэтому первый же образ её забьёт.')),
+				E('li', {}, _('Оперативная память общая с роутером. У BE7000 её 1 ГБ, поэтому несколько тяжёлых программ вместе лучше не запускать.'))
+			]),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Как установить')),
+			E('p', {}, _('Подключите и смонтируйте диск, потом выполните команду ниже. Она найдёт диск, поставит Docker и Dockerman, перенесёт данные Docker на диск и настроит файрвол.')),
+			E('pre', {}, 'be7000-docker setup --yes'),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Где что лежит')),
+			E('ul', { 'style': 'margin:4px 0 8px 18px' }, [
+				E('li', {}, _('Образы, тома и слои лежат в каталоге data-root на вашем диске. Сколько места занято, показывает кнопка в разделе обслуживания внизу страницы.')),
+				E('li', {}, _('Файлы стеков лежат в /etc/be7000-docker/stacks, у каждого стека своя папка с файлом docker-compose.yml. Их можно править прямо на этой странице.')),
+				E('li', {}, _('Каждый стек можно запустить, остановить, обновить его образы и посмотреть журнал кнопками в таблице.'))
+			]),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Сеть и файрвол')),
+			E('p', {}, _('Контейнеры живут в отдельной зоне docker. Файрвол разрешает им выходить в интернет, а локальной сети разрешает открывать порты, которые контейнеры публикуют. Из интернета к контейнерам по умолчанию никто не попадёт.')),
+			E('p', {}, _('Если контейнеры не выходят в интернет, вверху страницы появится кнопка с предложением это разрешить. То же делает команда be7000-docker firewall.')),
+			E('p', {}, _('Hybrid Failover последних версий ведёт контейнеры так же, как остальные устройства сети: их трафик идёт по тем же правилам, а мосты Docker он подхватывает сам. Если стоит старая версия, контейнерам прописываются публичные DNS-серверы, иначе роутер отвечал бы им служебными адресами Hybrid Failover, до которых не достучаться. Тогда трафик контейнеров идёт напрямую. Если Hybrid Failover поставлен позже Docker, нажмите ту же кнопку или выполните be7000-docker firewall.')),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Осторожно')),
+			E('ul', { 'style': 'margin:4px 0 8px 18px' }, [
+				E('li', {}, _('Контейнеры с доступом к /var/run/docker.sock, например Portainer и Watchtower, получают полный контроль над Docker, а значит и над роутером. Ставьте их, только если понимаете, зачем они вам.')),
+				E('li', {}, _('Не открывайте порты управления контейнерами из интернета.'))
+			]),
+			E('h4', { 'style': 'margin:14px 0 4px' }, _('Если что-то не работает')),
+			E('ul', { 'style': 'margin:4px 0 8px 18px' }, [
+				E('li', {}, _('Docker не отвечает. Посмотрите состояние командой /etc/init.d/dockerd status и системный журнал.')),
+				E('li', {}, _('Не хватает места. Кнопки очистки внизу страницы убирают лишние образы и неподключённые тома.'))
 			])
 		]);
 	},

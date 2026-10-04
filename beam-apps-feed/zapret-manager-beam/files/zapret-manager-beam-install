@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -eu
+
+if [ ! -f /etc/be7000-release ] || ! grep -q "^DISTRIB_ID='Beam WRT'" /etc/openwrt_release 2>/dev/null; then
+	echo "This package is only for Beam WRT" >&2
+	exit 1
+fi
+
+arch=$(apk --print-arch 2>/dev/null || true)
+if [ "$arch" != aarch64 ]; then
+	echo "Unsupported apk architecture $arch" >&2
+	exit 1
+fi
+
+sh /usr/share/zapret-manager-beam/ZapretManager_LuCI.sh
+/usr/libexec/zapret-manager-beam-patch

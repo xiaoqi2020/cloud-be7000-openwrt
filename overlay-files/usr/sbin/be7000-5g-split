@@ -228,6 +228,25 @@ config_off() {
 	uci commit wireless
 }
 
+# The 5 GHz LED follows the access point netdev. In MLO there is no phyN-apM,
+# the traffic is on the MLD interface ap-mld0, so the LED shows nothing unless
+# it is pointed there. The original device is kept to put it back.
+led_follow() {
+	local cur orig
+	cur="$(uci -q get system.led_wlan5g.dev)" || return 0
+	if [ "$1" = mlo ]; then
+		[ "$cur" = ap-mld0 ] && return 0
+		uci -q get system.led_wlan5g.be7000_dev >/dev/null || uci set system.led_wlan5g.be7000_dev="$cur"
+		uci set system.led_wlan5g.dev=ap-mld0
+	else
+		orig="$(uci -q get system.led_wlan5g.be7000_dev)" || return 0
+		uci set system.led_wlan5g.dev="$orig"
+		uci -q delete system.led_wlan5g.be7000_dev
+	fi
+	uci commit system
+	/etc/init.d/led restart >/dev/null 2>&1
+}
+
 # wifi-ifaces this script made for MLO, and the ones it switched off
 mlo_ifaces() {
 	uci -q show wireless | sed -n "s/^wireless\.\([^.]*\)\.be7000_mlo='1'$/\1/p"
@@ -237,14 +256,14 @@ mlo_parked() {
 }
 
 config_mlo_on() {
-	local r="$(main_radio)" low i n o v
+	local r="$(main_radio)" low i n o v radio
 	low="$(low_radio $r)"
 	[ -n "$r" ] && [ -n "$low" ] || { echo "MLO needs the two 5 GHz radios" >&2; return 1; }
-	[ -n "$(mlo_ifaces)" ] && return 0
 	for i in $(ifaces_of $r); do
 		[ "$(uci -q get wireless.$i.mode)" = ap ] || continue
 		[ "$(uci -q get wireless.$i.disabled)" = 1 ] && continue
 		n=${i}_mlo
+		uci -q get wireless.$n >/dev/null && continue
 		uci set wireless.$n=wifi-iface
 		uci add_list wireless.$n.device=$low
 		uci add_list wireless.$n.device=$r
@@ -266,33 +285,41 @@ config_mlo_on() {
 		done
 	done
 	[ -n "$(mlo_ifaces)" ] || { echo "no enabled 5 GHz access point to join" >&2; return 1; }
-	# no neighbour scan on the lower radio: at 160 MHz its MLO link needs a
-	# DFS check, and a scan running at that moment makes the kernel refuse
-	# it (-EBUSY), so the link never comes up
-	if [ "$(uci -q get wireless.$low.noscan)" != 1 ]; then
-		uci set wireless.$low.noscan=1
-		uci set wireless.$low.be7000_noscan=1
-	fi
+	# Do not start a neighbour scan while either MLO link is being created.
+	# On the lower radio it can collide with DFS CAC (-EBUSY). On the upper
+	# radio a scan vdev timeout makes ath12k restart the whole QCN9274.
+	for radio in $low $r; do
+		if [ "$(uci -q get wireless.$radio.noscan)" != 1 ]; then
+			uci set wireless.$radio.noscan=1
+			uci set wireless.$radio.be7000_noscan=1
+		fi
+	done
 	uci commit wireless
+	led_follow mlo
 }
 
 config_mlo_off() {
-	local i low
+	local i r low radio
 	for i in $(mlo_ifaces); do uci -q delete wireless.$i; done
 	for i in $(mlo_parked); do
 		uci -q delete wireless.$i.disabled
 		uci -q delete wireless.$i.be7000_mlo_off
 	done
-	low="$(low_radio "$(main_radio)")"
-	if [ -n "$low" ] && [ "$(uci -q get wireless.$low.be7000_noscan)" = 1 ]; then
-		uci -q delete wireless.$low.noscan
-		uci -q delete wireless.$low.be7000_noscan
-	fi
+	r="$(main_radio)"
+	low="$(low_radio "$r")"
+	for radio in $low $r; do
+		[ -n "$radio" ] || continue
+		if [ "$(uci -q get wireless.$radio.be7000_noscan)" = 1 ]; then
+			uci -q delete wireless.$radio.noscan
+			uci -q delete wireless.$radio.be7000_noscan
+		fi
+	done
 	if [ -n "$low" ] && uci -q get wireless.$low.be7000_htmode >/dev/null; then
 		uci set wireless.$low.htmode="$(uci -q get wireless.$low.be7000_htmode)"
 		uci -q delete wireless.$low.be7000_htmode
 	fi
 	uci commit wireless
+	led_follow off
 }
 
 # every MLD has a working link on both radios (a link that is not on air
@@ -329,9 +356,14 @@ mlo_watch() {
 		wifi up
 		mlo_wait 60 && return 0 ;;
 	esac
+	# A firmware recovery can finish after hostapd has already given up on
+	# one of the links. Start the configured MLD once more before falling
+	# back. This does not rebind the PCI device or interrupt a healthy MLD.
+	logger -t be7000-5g-split "MLO did not come up on both radios, retrying once"
+	wifi up
+	mlo_wait 90 && return 0
 	logger -t be7000-5g-split "MLO did not come up on both radios, back to two separate radios"
 	echo "MLO did not come up on both radios, back to two separate radios" >&2
-	save split
 	config_mlo_off
 	wifi up
 	return 1
@@ -426,6 +458,10 @@ case "$1" in
 	boot)
 		saved=$(saved_mode)
 		if [ $saved != single ]; then mode=split; id=$SPLIT_ID; else mode=single; id=0; fi
+		if [ $saved = mlo ] && ! config_mlo_on; then
+			logger -t be7000-5g-split "could not restore MLO config, starting as two separate radios"
+			saved="split"
+		fi
 		if [ -e "$PARAM" ]; then
 			# ath12k is already in: switch it by a rebind
 			apply_fw $id || exit 0

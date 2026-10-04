@@ -26,6 +26,17 @@ rom_kernel_hash() {
 	echo "$h"
 }
 
+# customfeeds.list is a conffile, so a router upgraded from an older image keeps
+# its old list. Lines the new image ships that are missing there are appended
+# (the ROM's copy already carries the right base and kernel hash).
+add_new_feeds() {
+	local l
+	[ -r /rom$LIST ] || return 0
+	grep -E '^https?://' /rom$LIST | while read -r l; do
+		grep -qxF "$l" "$LIST" || { echo "$l" >> "$LIST"; logger -t be7000-feeds "added feed $l"; }
+	done
+}
+
 start() {
 	[ -f "$LIST" ] || return 0
 	local base
@@ -36,10 +47,13 @@ start() {
 	fi
 	local hash
 	hash=$(rom_kernel_hash)
-	[ -n "$hash" ] || return 0
-	local want="feed/targets/qualcommbe/ipq95xx/$hash/packages/packages.adb"
-	grep -q "$want" "$LIST" && return 0
-	# either the unversioned path of the 1.2.x images or a previous hash
-	sed -i -E "s|feed/targets/qualcommbe/ipq95xx/([0-9a-f]{32}/)?packages/packages\.adb|$want|" "$LIST"
-	logger -t be7000-feeds "kernel module feed now $want"
+	if [ -n "$hash" ]; then
+		local want="feed/targets/qualcommbe/ipq95xx/$hash/packages/packages.adb"
+		grep -q "$want" "$LIST" || {
+			# either the unversioned path of the 1.2.x images or a previous hash
+			sed -i -E "s|feed/targets/qualcommbe/ipq95xx/([0-9a-f]{32}/)?packages/packages\.adb|$want|" "$LIST"
+			logger -t be7000-feeds "kernel module feed now $want"
+		}
+	fi
+	add_new_feeds
 }

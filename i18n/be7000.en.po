@@ -421,8 +421,8 @@ msgstr "Turn on"
 msgid "Аппаратная разгрузка"
 msgstr "Hardware offload"
 
-msgid "Маршрутизацию и NAT может выполнять сетевой процессор PPE вместо основного процессора. Функция экспериментальная и по умолчанию выключена. Если после включения что-то перестало работать, выключите её здесь."
-msgstr "Routing and NAT can be done by the PPE network engine instead of the main CPU. The feature is experimental and off by default. If something stops working after you turn it on, turn it off here."
+msgid "Маршрутизацию и NAT может выполнять сетевой процессор PPE вместо основного процессора. Функция проверена и работает, по умолчанию выключена. Если после включения что-то перестало работать, выключите её здесь."
+msgstr "Routing and NAT can be done by the PPE network engine instead of the main CPU. The feature is tested and works, and it is off by default. If something stops working after you turn it on, turn it off here."
 
 msgid "В этой сборке нет драйвера PPE с поддержкой разгрузки."
 msgstr "This build has no PPE driver with offload support."
@@ -469,8 +469,8 @@ msgstr "What the PPE is"
 msgid "В процессоре IPQ9554 кроме ядер ARM есть отдельный сетевой блок PPE (packet processing engine). Он умеет сам коммутировать кадры между портами и маршрутизировать пакеты с NAT по таблице соединений, не нагружая основной процессор. Заводская прошивка Xiaomi им пользуется, в обычном OpenWrt он до сих пор простаивает."
 msgstr "Besides the ARM cores, the IPQ9554 has a separate network block, the PPE (packet processing engine). It can switch frames between ports and route packets with NAT from a connection table on its own, without loading the main CPU. The Xiaomi factory firmware uses it, in regular OpenWrt it still sits idle."
 
-msgid "Поддержка разгрузки в Beam WRT построена на открытой работе для OpenWrt и наших исправлениях к ней. Она ещё не принята в основной OpenWrt, поэтому здесь она экспериментальная."
-msgstr "Offload support in Beam WRT is built on open work for OpenWrt plus our fixes to it. It is not in mainline OpenWrt yet, so here it is experimental."
+msgid "Поддержка разгрузки в Beam WRT построена на открытой работе для OpenWrt и наших исправлениях к ней. Она ещё не принята в основной OpenWrt."
+msgstr "Offload support in Beam WRT is built on open work for OpenWrt plus our fixes to it. It is not in mainline OpenWrt yet."
 
 msgid "Первые пакеты каждого соединения, как обычно, проходят межсетевой экран на процессоре. Когда соединение установлено, ядро записывает его в таблицу PPE, и дальше PPE пересылает его пакеты сам, с подменой адресов и портов. Это обычная функция OpenWrt, она называется аппаратной разгрузкой потоков (flow offloading). Включить её здесь то же самое, что поставить галку в настройках межсетевого экрана."
 msgstr "The first packets of every connection pass the firewall on the CPU as usual. Once the connection is established, the kernel writes it into the PPE table, and from then on the PPE forwards its packets itself, rewriting addresses and ports. This is a regular OpenWrt feature called hardware flow offloading. Turning it on here is the same as ticking the box in the firewall settings."
@@ -720,3 +720,368 @@ msgstr "Once the service is on, it takes over the router DNS and turns IPv6 off 
 
 msgid "Исходники и подробная документация на GitHub"
 msgstr "Sources and detailed docs on GitHub"
+
+msgid "Контейнеры сейчас не выходят в интернет, и опубликованные порты, например веб-интерфейс qBittorrent, не открываются из локальной сети. Файрволу роутера нужно разрешить пересылку между зоной docker, интернетом и локальной сетью."
+msgstr "Containers cannot reach the internet right now, and published ports, the qBittorrent web interface for example, do not open from the local network. The router firewall has to allow forwarding between the docker zone, the internet and the local network."
+
+msgid "Разрешить"
+msgstr "Allow"
+
+msgid "Настраиваю файрвол"
+msgstr "Setting up the firewall"
+
+msgid "Установлен"
+msgstr "Installed"
+
+msgid "Пока недоступен"
+msgstr "Not available yet"
+
+msgid "Панель для установки и настройки Zapret, Zapret2, ByeDPI, ByeTube, NetShift, AmneziaWG и других средств маршрутизации и обхода блокировок."
+msgstr "A panel for installing and configuring Zapret, Zapret2, ByeDPI, ByeTube, NetShift, AmneziaWG and other routing and blocking circumvention tools."
+
+msgid "Версия для Beam WRT"
+msgstr "Beam WRT version"
+
+msgid "Менеджер адаптирован под архитектуру aarch64_cortex-a73 и пакетный менеджер apk. Zapret, Zapret2, ByeDPI, NetShift, sing-box, hev-socks5-tunnel и интерфейс AmneziaWG ставятся из подписанного фида Beam WRT."
+msgstr "The manager is adapted to the aarch64_cortex-a73 architecture and the apk package manager. Zapret, Zapret2, ByeDPI, NetShift, sing-box, hev-socks5-tunnel and the AmneziaWG interface install from the signed Beam WRT feed."
+
+msgid "Поставится только панель Zapret Manager и её служебные зависимости. Zapret и другие способы обхода не включаются автоматически."
+msgstr "Only the Zapret Manager panel and its service dependencies are installed. Zapret and the other circumvention methods are not turned on automatically."
+
+msgid "После установки откройте панель и выберите нужный способ. Его пакеты будут установлены из фида Beam WRT с проверкой подписи."
+msgstr "After the install, open the panel and choose the method you need. Its packages are installed from the Beam WRT feed with a signature check."
+
+msgid "Внешние модули AmneziaWG не используются. Менеджер оставляет встроенный модуль, который собран вместе с ядром этой прошивки."
+msgstr "External AmneziaWG modules are not used. The manager keeps the built-in module that is built together with the kernel of this firmware."
+
+msgid "Открыть Zapret Manager"
+msgstr "Open Zapret Manager"
+
+msgid "Пакет пока не найден в фиде. Сначала нужно опубликовать новую сборку фида."
+msgstr "The package is not in the feed yet. A new feed build has to be published first."
+
+msgid "Исходный проект"
+msgstr "Source project"
+
+msgid "Что такое Docker и зачем он на роутере"
+msgstr "What Docker is and why it is on a router"
+
+msgid "Docker запускает программы в изолированных контейнерах. В контейнере уже лежит всё нужное для программы, поэтому её не нужно собирать под роутер, и она не мешает системе. Так на роутере работают, например, AdGuard Home, Home Assistant, торрент-клиент, менеджер паролей и многое другое."
+msgstr "Docker runs programs in isolated containers. A container already holds everything the program needs, so it does not have to be built for the router and it does not get in the way of the system. This is how AdGuard Home, Home Assistant, a torrent client, a password manager and much more run on a router."
+
+msgid "Контейнеры ставятся из готовых образов. Набор контейнеров, который запускается вместе, описывается одним файлом docker-compose.yml. Такой набор здесь называется стеком."
+msgstr "Containers are installed from ready-made images. A set of containers that start together is described by one docker-compose.yml file. Such a set is called a stack here."
+
+msgid "USB-диск или SSD с файловой системой ext4 и хотя бы гигабайтом свободного места. Образы занимают сотни мегабайт, а во внутренней памяти роутера около 19 МБ, поэтому первый же образ её забьёт."
+msgstr "A USB disk or SSD with the ext4 file system and at least a gigabyte of free space. Images take hundreds of megabytes, and the router internal memory is about 19 MB, so the first image fills it."
+
+msgid "Оперативная память общая с роутером. У BE7000 её 1 ГБ, поэтому несколько тяжёлых программ вместе лучше не запускать."
+msgstr "The memory is shared with the router. The BE7000 has 1 GB, so it is better not to run several heavy programs together."
+
+msgid "Как установить"
+msgstr "How to install"
+
+msgid "Подключите и смонтируйте диск, потом выполните команду ниже. Она найдёт диск, поставит Docker и Dockerman, перенесёт данные Docker на диск и настроит файрвол."
+msgstr "Plug in and mount the disk, then run the command below. It finds the disk, installs Docker and Dockerman, moves the Docker data to the disk and sets up the firewall."
+
+msgid "Где что лежит"
+msgstr "Where things are"
+
+msgid "Образы, тома и слои лежат в каталоге data-root на вашем диске. Сколько места занято, показывает кнопка в разделе обслуживания внизу страницы."
+msgstr "Images, volumes and layers live in the data-root directory on your disk. The button in the maintenance part at the bottom of the page shows how much space is used."
+
+msgid "Файлы стеков лежат в /etc/be7000-docker/stacks, у каждого стека своя папка с файлом docker-compose.yml. Их можно править прямо на этой странице."
+msgstr "Stack files are in /etc/be7000-docker/stacks, each stack has its own folder with a docker-compose.yml file. You can edit them right on this page."
+
+msgid "Каждый стек можно запустить, остановить, обновить его образы и посмотреть журнал кнопками в таблице."
+msgstr "Every stack can be started, stopped, have its images updated and its log read with the buttons in the table."
+
+msgid "Сеть и файрвол"
+msgstr "Network and firewall"
+
+msgid "Контейнеры живут в отдельной зоне docker. Файрвол разрешает им выходить в интернет, а локальной сети разрешает открывать порты, которые контейнеры публикуют. Из интернета к контейнерам по умолчанию никто не попадёт."
+msgstr "Containers live in a separate docker zone. The firewall lets them out to the internet and lets the local network open the ports the containers publish. By default nobody from the internet can reach the containers."
+
+msgid "Если контейнеры не выходят в интернет, вверху страницы появится кнопка с предложением это разрешить. То же делает команда be7000-docker firewall."
+msgstr "If containers cannot reach the internet, a button offering to allow it shows up at the top of the page. The be7000-docker firewall command does the same."
+
+msgid "Осторожно"
+msgstr "Be careful"
+
+msgid "Контейнеры с доступом к /var/run/docker.sock, например Portainer и Watchtower, получают полный контроль над Docker, а значит и над роутером. Ставьте их, только если понимаете, зачем они вам."
+msgstr "Containers with access to /var/run/docker.sock, Portainer and Watchtower for example, get full control of Docker, and so of the router. Install them only if you understand why you need them."
+
+msgid "Не открывайте порты управления контейнерами из интернета."
+msgstr "Do not open the management ports of containers to the internet."
+
+msgid "Если что-то не работает"
+msgstr "If something does not work"
+
+msgid "Docker не отвечает. Посмотрите состояние командой /etc/init.d/dockerd status и системный журнал."
+msgstr "Docker does not answer. Check the state with the /etc/init.d/dockerd status command and the system log."
+
+msgid "Не хватает места. Кнопки очистки внизу страницы убирают лишние образы и неподключённые тома."
+msgstr "Out of space. The cleanup buttons at the bottom of the page remove unused images and unattached volumes."
+
+msgid "Автоматическая проверка"
+msgstr "Automatic check"
+
+msgid "Раз в сутки роутер сам спрашивает у GitHub, вышла ли новая версия, и сообщает об этом. На странице Статус, Обзор появляется блок с новой версией, а в верхней панели темы Nimbus кнопка. Роутер отправляет один запрос к api.github.com и ничего о вас не передаёт. Обновление само не ставится, решение всегда за вами."
+msgstr "Once a day the router asks GitHub by itself whether a new version is out and tells you about it. A block with the new version appears on Status, Overview, and a button in the top bar of the Nimbus theme. The router sends one request to api.github.com and tells nothing about you. The update is never installed by itself, the decision is always yours."
+
+msgid "Проверять наличие новой версии автоматически"
+msgstr "Check for a new version automatically"
+
+msgid "Сборки без номера версии, например собранные самостоятельно, не проверяются."
+msgstr "Builds without a version number, such as self-built ones, are not checked."
+
+msgid "нужно доустановить"
+msgstr "needs finishing"
+
+msgid "Доустановить"
+msgstr "Finish install"
+
+msgid "Пакет Zapret Manager стоит, но сама панель не создалась. Обычно так бывает, когда во время установки не было интернета. Нажмите кнопку, чтобы завершить установку, роутеру понадобится доступ в интернет."
+msgstr "The Zapret Manager package is installed, but the panel itself was not created. This usually happens when there was no internet during the install. Press the button to finish it, the router needs internet access for this."
+
+msgid "Hybrid Failover последних версий ведёт контейнеры так же, как остальные устройства сети: их трафик идёт по тем же правилам, а мосты Docker он подхватывает сам. Если стоит старая версия, контейнерам прописываются публичные DNS-серверы, иначе роутер отвечал бы им служебными адресами Hybrid Failover, до которых не достучаться. Тогда трафик контейнеров идёт напрямую. Если Hybrid Failover поставлен позже Docker, нажмите ту же кнопку или выполните be7000-docker firewall."
+msgstr "The latest Hybrid Failover treats containers like the other devices on the network: their traffic follows the same rules, and it picks up the Docker bridges by itself. With an older version the containers get public DNS servers, because the router would otherwise answer them with service addresses of Hybrid Failover that cannot be reached. Their traffic then goes out directly. If Hybrid Failover was installed after Docker, press the same button or run be7000-docker firewall."
+msgid "Светодиоды"
+msgstr "LEDs"
+
+msgid "На передней панели два индикатора, которым в Beam WRT можно дать дополнительные роли. Оба включены по умолчанию, здесь их можно выключить. Всё применяется сразу."
+msgstr "Beam WRT can give two of the indicators on the front panel extra roles. Both are on by default and can be turned off here. Everything applies at once."
+
+msgid "Wi-Fi 2,4 ГГц, янтарный"
+msgstr "Wi-Fi 2.4 GHz, amber"
+
+msgid "занят"
+msgstr "in use"
+
+msgid "Янтарный светодиод индикатора сети мигает, когда по Wi-Fi 2,4 ГГц идёт трафик. Белый светодиод рядом остаётся индикатором 5 ГГц, так что по цвету видно, какой диапазон работает."
+msgstr "The amber LED of the network indicator blinks while Wi-Fi 2.4 GHz carries traffic. The white one next to it stays the 5 GHz indicator, so the colour shows which band is busy."
+
+msgid "Этот светодиод уже настроен вами на странице Индикаторы, поэтому он не тронут."
+msgstr "You have already set this LED up on the LED page, so it is left alone."
+
+msgid "Hybrid Failover, белый AIoT"
+msgstr "Hybrid Failover, white AIoT"
+
+msgid "горит"
+msgstr "lit"
+
+msgid "Светодиод AIoT горит, пока работает Hybrid Failover и его правила маршрутизации на месте. Если служба остановлена или упала, он гаснет."
+msgstr "The AIoT LED is lit while Hybrid Failover runs and its routing rules are in place. If the service is stopped or has died, it goes out."
+
+msgid "Hybrid Failover не установлен, светодиод не горит. Его можно поставить на странице Службы, Дополнения."
+msgstr "Hybrid Failover is not installed, so the LED stays dark. You can install it on Services, Add-ons."
+
+msgid "Какие светодиоды есть"
+msgstr "Which LEDs there are"
+
+msgid "На плате есть белые и янтарные светодиоды. Яркость у них не регулируется, они либо горят, либо нет. Белый светодиод сети по умолчанию показывает трафик Wi-Fi 5 ГГц, белый системный горит, когда роутер загрузился. Янтарный системный показывает проблемы при загрузке."
+msgstr "The board has white and amber LEDs. Their brightness cannot be changed, they are either on or off. The white network LED shows Wi-Fi 5 GHz traffic by default, the white system LED is on once the router has booted. The amber system LED shows boot problems."
+
+msgid "Светодиоды LAN и WAN у разъёмов показывают связь и трафик порта."
+msgstr "The LAN and WAN LEDs at the sockets show link and traffic of the port."
+
+msgid "Wi-Fi 2,4 ГГц"
+msgstr "Wi-Fi 2.4 GHz"
+
+msgid "Янтарный светодиод сети привязывается к интерфейсу точки доступа 2,4 ГГц и мигает при приёме и передаче. В режиме MLO белый светодиод следует за общим интерфейсом MLO, это делается само при переключении режима 5 ГГц."
+msgstr "The amber network LED is tied to the 2.4 GHz access point interface and blinks on receive and transmit. In MLO mode the white LED follows the shared MLO interface, which happens by itself when the 5 GHz mode is switched."
+
+msgid "Hybrid Failover"
+msgstr "Hybrid Failover"
+
+msgid "Белый светодиод AIoT проверяется каждые пять секунд. Он горит, если процесс Hybrid Failover работает и таблица его правил в межсетевом экране есть. Раньше узнать, что служба упала и трафик пошёл мимо неё, можно было только по странице службы."
+msgstr "The white AIoT LED is checked every five seconds. It is lit if the Hybrid Failover process runs and the table of its rules in the firewall exists. Before, the only way to notice that the service had died and traffic went around it was the service page."
+
+msgid "Если светодиод уже настроен вами"
+msgstr "If you have already set a LED up"
+
+msgid "Если вы сами назначили янтарный светодиод сети или белый AIoT на странице Индикаторы, Beam WRT их не трогает. Чтобы вернуть управление сюда, удалите свою настройку на той странице."
+msgstr "If you assigned the amber network LED or the white AIoT one yourself on the LED page, Beam WRT leaves them alone. To hand control back here, delete your setting on that page."
+
+msgid "Из консоли"
+msgstr "From the console"
+
+msgid "Работу Hybrid Failover"
+msgstr "Hybrid Failover running"
+
+msgid "Связь или трафик интерфейса"
+msgstr "Link or traffic of an interface"
+
+msgid "Работу процесса"
+msgstr "A process running"
+
+msgid "Доступность интернета"
+msgstr "Internet reachable"
+
+msgid "Результат своей команды"
+msgstr "Result of your own command"
+
+msgid "Горит всегда"
+msgstr "Always on"
+
+msgid "Мигает всегда"
+msgstr "Always blinking"
+
+msgid "Пульс"
+msgstr "Heartbeat"
+
+msgid "Выключен"
+msgstr "Off"
+
+msgid "связь"
+msgstr "link"
+
+msgid "приём"
+msgstr "receive"
+
+msgid "передача"
+msgstr "transmit"
+
+msgid "мигает"
+msgstr "blinks"
+
+msgid "Интерфейс"
+msgstr "Interface"
+
+msgid "Что считать"
+msgstr "What counts"
+
+msgid "Имя процесса"
+msgstr "Process name"
+
+msgid "Адрес для проверки"
+msgstr "Address to check"
+
+msgid "Команда"
+msgstr "Command"
+
+msgid "Когда выполнено"
+msgstr "When it holds"
+
+msgid "Наоборот"
+msgstr "Inverted"
+
+msgid "светодиод показывает, что условие не выполнено"
+msgstr "the LED shows that the condition does not hold"
+
+msgid "Мигание, мс"
+msgstr "Blinking, ms"
+
+msgid "не горит"
+msgstr "off"
+
+msgid "Светодиод AIoT, белый"
+msgstr "AIoT LED, white"
+
+msgid "Этот светодиод можно привязать к чему угодно. Выберите, что он показывает, и как. По умолчанию он горит, пока работает Hybrid Failover."
+msgstr "This LED can be tied to anything. Choose what it shows and how. By default it is lit while Hybrid Failover runs."
+
+msgid "Что показывает"
+msgstr "What it shows"
+
+msgid "Светодиод AIoT"
+msgstr "The AIoT LED"
+
+msgid "Белый светодиод AIoT свободен, ему можно дать любую роль. Источники, которые можно выбрать"
+msgstr "The white AIoT LED is free and can be given any role. The sources to choose from"
+
+msgid "Работа Hybrid Failover. Процесс запущен и таблица его правил в межсетевом экране на месте. Проверка каждые пять секунд."
+msgstr "Hybrid Failover running. The process is up and the table of its rules in the firewall is in place. Checked every five seconds."
+
+msgid "Связь или трафик интерфейса. Светодиод сам следует за интерфейсом, мигает при приёме и передаче или горит, пока есть связь. Подходит любой интерфейс, например wan, awg0 или br-lan."
+msgstr "Link or traffic of an interface. The LED follows the interface by itself, blinks on receive and transmit or stays lit while there is a link. Any interface works, for example wan, awg0 or br-lan."
+
+msgid "Работа процесса. Горит, пока в системе есть процесс с таким именем."
+msgstr "A process running. Lit while a process with that name exists."
+
+msgid "Доступность интернета. Роутер раз в 15 секунд проверяет адрес командой ping."
+msgstr "Internet reachable. The router pings the address every 15 seconds."
+
+msgid "Результат своей команды. Команда выполняется раз в пять секунд от имени root, светодиод показывает, завершилась ли она с кодом 0."
+msgstr "Result of your own command. The command runs every five seconds as root, and the LED shows whether it exited with code 0."
+
+msgid "Горит всегда, мигает всегда, пульс или выключен."
+msgstr "Always on, always blinking, heartbeat or off."
+
+msgid "Для проверяемых источников можно выбрать, как показывать выполненное условие, горением или миганием, и перевернуть логику: тогда светодиод покажет, что условие не выполнено. Это удобно для сигнала о неполадке."
+msgstr "For the checked sources you can choose how to show that the condition holds, lit or blinking, and turn the logic around so that the LED shows the condition does not hold. This is handy as a fault signal."
+
+msgid "Не управляется здесь"
+msgstr "Not managed here"
+
+msgid "Светодиод показывает, выполнено ли условие. Выберите условие и то, как оно будет выглядеть. По умолчанию он горит, пока работает Hybrid Failover."
+msgstr "The LED shows whether a condition holds. Choose the condition and how it looks. By default the LED is lit while Hybrid Failover runs."
+
+msgid "Этот светодиод настроен на странице Индикаторы, поэтому здесь он не управляется. Удалите его настройку там, чтобы вернуть управление сюда."
+msgstr "This LED is set up on the LED Configuration page, so it is not managed here. Delete its entry there to hand control back."
+
+msgid "Открыть Индикаторы"
+msgstr "Open LED Configuration"
+
+msgid "Здесь светодиод AIoT привязывается к состоянию: работе Hybrid Failover, процессу, доступности адреса или результату команды. Всё, что ядро умеет само, например трафик интерфейса, мигание или пульс, настраивается для любого светодиода на странице"
+msgstr "Here the AIoT LED is tied to a state: Hybrid Failover running, a process, an address answering or the result of a command. Everything the kernel can do by itself, such as interface traffic, blinking or a heartbeat, is set for any LED on the page"
+
+msgid "Индикаторы"
+msgstr "LED Configuration"
+
+msgid "На плате есть белые и янтарные светодиоды. Яркость у них не регулируется, они либо горят, либо нет. Белый светодиод сети по умолчанию показывает трафик Wi-Fi 5 ГГц, белый системный горит, когда роутер загрузился. Янтарный системный показывает проблемы при загрузке. Светодиоды LAN и WAN у разъёмов показывают связь и трафик порта."
+msgstr "The board has white and amber LEDs. Their brightness cannot be changed, they are either on or off. The white network LED shows Wi-Fi 5 GHz traffic by default, the white system LED is on once the router has booted. The amber system LED shows boot problems. The LAN and WAN LEDs at the sockets show link and traffic of the port."
+
+msgid "Что настраивается на странице Индикаторы"
+msgstr "What is set on the LED Configuration page"
+
+msgid "Любому светодиоду там можно задать любой режим из тех, что умеет ядро: трафик или связь интерфейса, мигание с нужными интервалами, пульс, постоянное свечение и другие. По умолчанию янтарный светодиод сети уже стоит там как Wi-Fi 2.4GHz и мигает при трафике 2,4 ГГц, его можно изменить или удалить. В режиме MLO светодиод 5 ГГц сам переключается на общий интерфейс MLO."
+msgstr "Any LED can be given any mode the kernel offers there: interface traffic or link, blinking with the intervals you want, a heartbeat, steady light and more. The amber network LED is already there as WIFI 2.4GHz and blinks with 2.4 GHz traffic, you can change or delete it. In MLO mode the 5 GHz LED switches to the shared MLO interface by itself."
+
+msgid "Белый светодиод AIoT свободен. Здесь он привязывается к тому, что ядро само отследить не может. Условия, которые можно выбрать"
+msgstr "The white AIoT LED is free. Here it is tied to what the kernel cannot follow by itself. The conditions to choose from"
+
+msgid "Выполненное условие можно показать горением или миганием, а логику перевернуть: тогда светодиод покажет, что условие не выполнено. Это удобно для сигнала о неполадке."
+msgstr "A condition that holds can be shown as lit or blinking, and the logic can be turned around so that the LED shows the condition does not hold. This is handy as a fault signal."
+
+msgid "Если вы сами назначили светодиод AIoT на странице Индикаторы, Beam WRT его не трогает, а здесь он помечен как занятый. Чтобы вернуть управление сюда, удалите свою настройку на той странице."
+msgstr "If you set the AIoT LED up yourself on the LED Configuration page, Beam WRT leaves it alone and it is marked as in use here. To hand control back, delete your entry on that page."
+
+msgid "Светодиод показывает, выполнено ли условие. Выберите условие и то, как оно будет выглядеть. По умолчанию светодиод свободен."
+msgstr "The LED shows whether a condition holds. Choose the condition and how it looks. By default the LED is free."
+
+msgid "Здесь светодиод AIoT привязывается к состоянию: работе процесса, доступности адреса или результату команды. Всё, что ядро умеет само, например трафик интерфейса, мигание или пульс, настраивается для любого светодиода на странице"
+msgstr "Here the AIoT LED is tied to a state: a process running, an address answering or the result of a command. Everything the kernel can do by itself, such as interface traffic, blinking or a heartbeat, is set for any LED on the page"
+
+msgid "Работа процесса. Горит, пока в системе есть процесс с таким именем, например hybrid-failover или sing-box. Проверка каждые пять секунд."
+msgstr "A process running. Lit while a process with that name exists, for example hybrid-failover or sing-box. Checked every five seconds."
+
+msgid "Состояние (Beam WRT)"
+msgstr "State (Beam WRT)"
+
+msgid "Светодиод показывает, выполнено ли условие: работает ли процесс, отвечает ли адрес или завершилась ли команда с кодом 0. Выполненное условие можно показать горением или миганием, а можно перевернуть."
+msgstr "The LED shows whether a condition holds: a process is running, an address answers or a command exits with code 0. A condition that holds can be shown as lit or blinking, and the logic can be turned around."
+
+msgid "Что проверять"
+msgstr "What to check"
+
+msgid "Доступность адреса"
+msgstr "An address answering"
+
+msgid "Например hybrid-failover или sing-box. Проверка каждые пять секунд."
+msgstr "For example hybrid-failover or sing-box. Checked every five seconds."
+
+msgid "Проверяется командой ping раз в 15 секунд."
+msgstr "Checked with ping every 15 seconds."
+
+msgid "Выполняется раз в пять секунд от имени root. Светодиод показывает, завершилась ли она с кодом 0."
+msgstr "Runs every five seconds as root. The LED shows whether it exited with code 0."
+
+msgid "Светодиод показывает, что условие не выполнено. Удобно для сигнала о неполадке."
+msgstr "The LED shows that the condition does not hold. Handy as a fault signal."
+
+msgid "Горит, мс"
+msgstr "On, ms"
+
+msgid "Не горит, мс"
+msgstr "Off, ms"

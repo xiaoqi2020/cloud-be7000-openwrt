@@ -5,8 +5,8 @@
 #   install <id> [bot]   apk update and install in the background, log in $LOG
 #   log                  the log of the last install
 #
-# Only hybrid-failover for now. It lives in its own feed directory,
-# feed/hybrid-failover/, rebuilt from every upstream release.
+# Hybrid Failover has its own rolling feed. Zapret Manager and every native
+# package it uses are built by the main Beam WRT feed.
 
 LOG=/tmp/be7000-addons.log
 PID=/tmp/be7000-addons.pid
@@ -20,8 +20,24 @@ ver_installed() {
 	apk info "$1" 2>/dev/null | sed -n "s/^$1-\([^ ]*\) description:.*/\1/p" | head -1
 }
 
+# /var is a tmpfs, so after a boot apk has no package index until something
+# runs apk update. Do it once here, at most every ten minutes.
+refresh_index() {
+	local stamp=/tmp/be7000-addons.indexed now
+	now=$(date +%s)
+	[ -e $stamp ] && [ $((now - $(cat $stamp 2>/dev/null || echo 0))) -lt 600 ] && return 0
+	echo $now > $stamp
+	timeout 25 apk update >/dev/null 2>&1
+}
+
 ver_feed() {
-	apk search -x "$1" 2>/dev/null | sed -n "s/^$1-//p" | head -1
+	local v
+	v=$(apk search -x "$1" 2>/dev/null | sed -n "s/^$1-//p" | head -1)
+	if [ -z "$v" ]; then
+		refresh_index
+		v=$(apk search -x "$1" 2>/dev/null | sed -n "s/^$1-//p" | head -1)
+	fi
+	echo "$v"
 }
 
 status_hf() {
@@ -36,7 +52,16 @@ status_hf() {
 		$([ -n "$bot" ] && echo true || echo false) \
 		$manual \
 		$(running && echo true || echo false) \
-		$(pgrep -f '/usr/sbin/hybrid-failover' >/dev/null 2>&1 && echo true || echo false)
+		$(pgrep -x hybrid-failover >/dev/null 2>&1 && echo true || echo false)
+}
+
+status_zm() {
+	local inst feed panel=false
+	inst=$(ver_installed zapret-manager-beam)
+	feed=$(ver_feed zapret-manager-beam)
+	[ -x /opt/zapret-manager-luci/backend.sh ] && panel=true
+	printf '{"id":"zapret-manager","installed":"%s","feed":"%s","panel":%s,"running":%s}\n' \
+		"$inst" "$feed" "$panel" "$(running && echo true || echo false)"
 }
 
 install_hf() {
@@ -44,18 +69,71 @@ install_hf() {
 	[ "$1" = bot ] && pkgs="$pkgs hybrid-failover-bot"
 	running && { echo "an install is already running"; return 1; }
 	(
+		tmp=$(mktemp -d)
 		echo "apk update"
 		apk update 2>&1 | tail -3
+		echo "apk fetch $pkgs"
+		if ! apk fetch --output "$tmp" $pkgs; then
+			rm -rf "$tmp"
+			/etc/init.d/rpcd start >/dev/null 2>&1
+			echo "=== failed, package download or signature check failed"
+			exit 1
+		fi
 		echo "apk add $pkgs"
 		# a copy installed by the project's own script owns the same files
 		if [ -x /usr/sbin/hybrid-failover ] && ! apk info -e hybrid-failover-core >/dev/null 2>&1; then
-			apk add --force-overwrite $pkgs 2>&1
+			apk add --force-overwrite "$tmp"/*.apk 2>&1
 		else
-			apk add $pkgs 2>&1
+			apk add "$tmp"/*.apk 2>&1
 		fi
 		rc=$?
+		rm -rf "$tmp"
 		rm -rf /tmp/luci-indexcache* /tmp/luci-modulecache 2>/dev/null
+		/etc/init.d/rpcd start >/dev/null 2>&1
 		[ $rc = 0 ] && echo "=== done" || echo "=== failed, apk exit code $rc"
+		rm -f $PID
+	) > $LOG 2>&1 < /dev/null &
+	echo $! > $PID
+	echo started
+}
+
+install_zm() {
+	running && { echo "an install is already running"; return 1; }
+	# package is there but the panel was never created: the installer step
+	# of the package failed (no network at that moment, for example), so
+	# run just that step again
+	if apk info -e zapret-manager-beam >/dev/null 2>&1 && [ ! -x /opt/zapret-manager-luci/backend.sh ]; then
+		(
+			echo "zapret-manager-beam-install"
+			/usr/libexec/zapret-manager-beam-install 2>&1
+			rc=$?
+			rm -rf /tmp/luci-indexcache* /tmp/luci-modulecache 2>/dev/null
+			/etc/init.d/rpcd reload >/dev/null 2>&1 || /etc/init.d/rpcd restart >/dev/null 2>&1
+			[ $rc = 0 ] && echo "=== done" || echo "=== failed, exit code $rc"
+			rm -f $PID
+		) > $LOG 2>&1 < /dev/null &
+		echo $! > $PID
+		echo started
+		return 0
+	fi
+	(
+		tmp=$(mktemp -d)
+		echo "apk update"
+		apk update 2>&1 | tail -3
+		echo "apk fetch zapret-manager-beam"
+		if ! apk fetch --output "$tmp" zapret-manager-beam; then
+			rm -rf "$tmp"
+			echo "=== failed, package download or signature check failed"
+			exit 1
+		fi
+		echo "apk add zapret-manager-beam"
+		apk add "$tmp"/*.apk 2>&1
+		rc=$?
+		rm -rf "$tmp"
+		rm -rf /tmp/luci-indexcache* /tmp/luci-modulecache 2>/dev/null
+		/etc/init.d/rpcd reload >/dev/null 2>&1 || /etc/init.d/rpcd restart >/dev/null 2>&1
+		[ $rc = 0 ] && echo "=== done" || echo "=== failed, apk exit code $rc"
+		rm -f $PID
 	) > $LOG 2>&1 < /dev/null &
 	echo $! > $PID
 	echo started
@@ -65,12 +143,14 @@ case "$1" in
 status)
 	case "$2" in
 	hybrid-failover) status_hf ;;
+	zapret-manager) status_zm ;;
 	*) echo '{"error":"unknown add-on"}' ;;
 	esac
 	;;
 install)
 	case "$2" in
 	hybrid-failover) install_hf "$3" ;;
+	zapret-manager) install_zm ;;
 	*) echo "unknown add-on"; exit 1 ;;
 	esac
 	;;

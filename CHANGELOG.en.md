@@ -2,6 +2,53 @@
 
 [Русская версия](CHANGELOG.md) · [中文](CHANGELOG.zh.md)
 
+**1.4.4**, October 3, 2026.
+- If your /overlay is on a USB disk and bigoverlay is turned off, then after updating to 1.4.3 the router stayed on the small internal partition and its packages and Hybrid Failover were gone until you restarted it by hand, I broke that myself in 1.4.3 while changing the check before the extra reboot, and now the check looks at the disk from the extroot settings and a turned off bigoverlay does not get in the way.
+- On the Build update page the release text is shown formatted, with headings, lists and highlighted code, and only in the interface language instead of one run of text in three languages.
+
+**1.4.3**, October 3, 2026.
+- The router tells you about a new version by itself. A button appears in the top bar and a block with an install button on Status, Overview. The check runs once a day and has a switch on the Build update page.
+- Services, Docker: stacks now has a description of what Docker is and how it works here. If containers cannot reach the internet, there is a button at the top that fixes it. The commands `be7000-docker firewall` and `be7000-docker diag` do the same.
+- Zapret Manager on the Add-ons page has a Finish install button. It appears when the package is installed but the panel itself was not created, for example because the internet was down during the install.
+- LEDs. The stock LED Configuration page has a new trigger, State (Beam WRT). Any LED can show whether a process is running, an address answers or a command exits with code 0, lit or blinking, inverted if you like. The amber network LED shows Wi-Fi 2.4 GHz traffic by default, it sits on the same page and is set there.
+- Docker containers had no internet and their ports did not open from the local network. The docker zone in the firewall had no docker0 device, so container packets were dropped. `be7000-docker setup` and `firewall` now set what is needed, and the bridges of user networks and compose stacks are added and removed automatically.
+- After Docker was installed, some devices on the network could no longer open sites that go through Hybrid Failover. Docker turned on `bridge-nf-call-iptables`, it is now kept off.
+- Hybrid Failover 1.7.54 steers containers like the other devices on the network. With an older version the containers get public DNS servers, otherwise they received service addresses they cannot reach.
+- Removing Zapret Manager from its own panel stopped `rpcd` and left its cron jobs behind. `rpcd` now keeps running, and removing the package cleans up its files too.
+- Switching to MLO could be cut off by a timeout before the fallback to two radios, leaving 5 GHz off. The time allowance is larger.
+- Routers updated from 1.4.1 did not get the new feeds in the repository list. The missing lines are now added at boot.
+- If Hybrid Failover could not start within the allowed time after an update, direct DNS could stay for good. The switch back is now retried on the next boot.
+- After an update with bigoverlay turned off, the router could reboot once more and come up on factory settings.
+- The Zapret Manager button on the Add-ons page could stay inactive after a reboot until `apk update` was run by hand. The index now refreshes by itself. Installing Zapret Manager no longer downloads all its dependencies as well.
+- Translations of the Add-ons page into English and Chinese were added. The new-version block on Overview shows its title.
+- Services, Dockerman now speaks Russian and Chinese, the translations are installed together with Docker. Long values on the Overview page no longer stick out of the table.
+- In MLO mode the 5 GHz Wi-Fi LED stayed dark: it was tied to the interface of one radio, which does not exist in MLO. It now switches to the shared MLO interface with the mode and goes back.
+- When the stock settings import fails it says why, and `be7000-stock-import diag` shows what the router sees on the stock settings partition.
+- The wireless page no longer shows NaN instead of the frequency when the channel is set to auto. The Hybrid Failover running indicator on the Add-ons page no longer lights for the bot alone.
+- If the firewall setup for Docker was interrupted, `dockerd` stayed stopped together with the containers. It now always starts. The daily update check does not run on builds without a version number and writes its state in one piece.
+- The documentation and the Hardware offload page describe MLO, two radios, offload and Docker as tested, the experimental labels are gone. What was not measured is stated separately.
+
+**1.4.2**, October 3, 2026.
+- Zapret Manager was added to Services, Add-ons. The manager is installed separately and does not enable anything until the user chooses it.
+- Zapret, Zapret2, ByeDPI, NetShift, sing-box, hev-socks5-tunnel and the AmneziaWG interface are built for Beam WRT and installed from its signed feed.
+- Zapret Manager keeps APK signature checks enabled and does not replace the `zms` command with an Internet downloader. Its terminal interface runs through Bash, installed as a regular dependency.
+- After a firmware update, `/overlay` moves back to the selected USB disk. If the first boot used the internal `rootfs_data`, the service reboots once and cannot create a reboot loop.
+- Package recovery after an update temporarily uses direct DNS when Hybrid Failover settings already point to `127.0.0.42` but the package has not been restored yet. The previous DNS settings return after the service starts.
+- The incompatible official target snapshot was removed from the repository list. Kernel modules now come only from the feed built for the Beam WRT kernel.
+
+**1.4.1**, October 3, 2026.
+- A temporary failure of one MLO link no longer permanently switches the router to two-radio mode. Both radios start without scanning, the firmware retries after radio recovery, and the saved MLO choice is kept.
+- LuCI no longer treats a short loss of connection during a 5 GHz mode switch as a failure and waits for the real result.
+- The Wireless page handles MLO on two radios correctly, hides parked network copies and shows the lower radio channel and width.
+- The 5 GHz mode block shows both MLO links as active with their own channels and widths.
+- Status, Overview shows MLO on both radios and leaves out parked network copies.
+- The Build update page reads multiline release notes with quotes after a line break. The 1.4.0 notes also work with the older page.
+- The update page and `be7000-update` no longer treat a separate Nimbus release as new firmware. Only Beam WRT releases with a sysupgrade image and checksums are selected.
+- Hybrid Failover installs from Add-ons again. Packages are downloaded and checked first, and `rpcd` is started again after installation.
+- Hybrid Failover APKs are signed and verified before publication. Feed filenames that made `apk` receive 404 were fixed.
+- The Docker script checks OverlayFS support before writing a new `data_root` and does not leave Docker on an incompatible filesystem.
+- Docker command messages were translated into Chinese. Their language follows LuCI.
+
 **1.4.0**, October 1, 2026.
 - Three 5 GHz modes instead of two. Besides one radio and two radios there is now MLO. In MLO one Wi-Fi 7 network runs on both radios at once, the lower one on channels 36-64 up to 160 MHz, the upper one from 149 up to 80 MHz. Wi-Fi 7 devices keep a link on two channels at once, the rest join one of them like an ordinary network. The mode changes in the 5 GHz mode block on Network, Wireless or with be7000-5g-split mode, without a reboot.
 - Older devices can join the MLO network too. Its base protection is WPA2 and WPA3, and Wi-Fi 7 gets its own WPA3 with GCMP-256. Before, a Mac with Wi-Fi 7 stayed on 2.4 GHz with such a network.

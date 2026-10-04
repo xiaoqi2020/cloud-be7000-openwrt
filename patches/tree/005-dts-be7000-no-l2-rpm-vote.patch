@@ -13,13 +13,14 @@ alone do not help; iperf3 941 Mbit/s both ways, no lane errors). The
 USB PHYs get a fixed 1.8 V regulator instead, l2 stays at the level
 the bootloader set.
 
-Qualcomm says l2 is the UNIPHY supply, set to 850 mV by the PMIC from
-OTP, and software should not change it (patchwork 14128430, never
-merged). Mainline 4f4c905e6a2a moves the RDP USB PLLs to l5, but the
-BE7000 RPM has no LDO5: voting it fails with -ENXIO and takes the whole
-mp5496 regulator set down, s1 (CPU) included, and USB never probes
-(tested on zerc00l). Stock describes neither l2 nor l5 and gives the
-USB PHYs no supplies, so a fixed regulator it is.
+Qualcomm's own patch for the reference board says l2 is 850 mV, not
+1800 mV, and that 1800 mV affected the stability of the networking
+subsystem (patchwork 14128430, changes requested, never merged). Mainline
+4f4c905e6a2a states that the USB PHYs use l5 and that l2 was specified for
+them by mistake. The BE7000 RPM gave us no usable l5: pointing the USB PHYs
+at it failed with -ENXIO, took the whole mp5496 regulator set down, s1 (CPU)
+included, and USB never probed (tested on zerc00l). Stock describes neither
+l2 nor l5 and gives the USB PHYs no supplies, so a fixed regulator it is.
 
 --- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 +++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts

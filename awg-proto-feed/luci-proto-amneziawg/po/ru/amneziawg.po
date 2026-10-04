@@ -1,0 +1,311 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-proto-amneziawg\n"
+"PO-Revision-Date: 2026-08-17 00:00+0400\n"
+"Last-Translator: \n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Imports settings from an existing AmneziaWG configuration file"
+msgstr "Импортирует настройки из существующего файла конфигурации AmneziaWG"
+
+msgid ""
+"Drag or paste a valid <em>*.conf</em> file below to configure the local "
+"AmneziaWG interface."
+msgstr ""
+"Перетащите или вставьте правильный файл <em>*.conf</em> ниже, чтобы "
+"настроить локальный интерфейс AmneziaWG."
+
+msgid ""
+"Paste or drag a AmneziaWG configuration (commonly <em>wg0.conf</em>) from "
+"another system below to create a matching peer entry allowing that system to "
+"connect to the local AmneziaWG interface."
+msgstr ""
+"Вставьте или перетащите конфигурацию AmneziaWG (обычно <em>wg0.conf</em>) из "
+"другой системы ниже, чтобы создать соответствующую запись узла, позволяющую "
+"этой системе подключиться к локальному интерфейсу AmneziaWG."
+
+msgid ""
+"To configure fully the local AmneziaWG interface from an existing (e.g. "
+"provider supplied) configuration file, use the <strong><a class=\"full-"
+"import\" href=\"#\">configuration import</a></strong> instead."
+msgstr ""
+"Чтобы полностью настроить локальный интерфейс AmneziaWG из существующего "
+"(например, предоставленного провайдером) файла конфигурации, используйте "
+"вместо этого <strong><a class=\"full-import\" href=\"#\">импорт "
+"конфигурации</a></strong>."
+
+msgid "Paste or drag supplied AmneziaWG configuration file…"
+msgstr "Вставьте или перетащите имеющийся файл конфигурации AmneziaWG…"
+
+msgid "Paste or drag AmneziaWG peer configuration (wg0.conf) file…"
+msgstr "Вставьте или перетащите файл конфигурации узлов AmneziaWG (wg0.conf)…"
+
+msgid "Recommended. IP addresses of the AmneziaWG interface."
+msgstr "Рекомендуемый. IP адреса интерфейса AmneziaWG."
+
+msgid "AmneziaWG Settings"
+msgstr "Настройки AmneziaWG"
+
+msgid ""
+"Further information about AmneziaWG interfaces and peers at <a href='https://"
+"docs.amnezia.org/documentation/amnezia-wg'>amnezia.org</a>."
+msgstr ""
+"Дополнительная информация об AmneziaWG интерфейсах и узлах приведена по "
+"адресу <a href='https://docs.amnezia.org/documentation/amnezia-wg'>amnezia.org</a>."
+
+msgid "Junk packet count."
+msgstr "Количество мусорных пакетов."
+
+msgid "Junk packet minimum size."
+msgstr "Минимальный размер мусорного пакета."
+
+msgid "Junk packet maximum size."
+msgstr "Максимальный размер мусорного пакета."
+
+msgid "Handshake initiation packet junk header size."
+msgstr "Размер мусорного заголовка пакета инициации рукопожатия."
+
+msgid "Handshake response packet junk header size."
+msgstr "Размер мусорного заголовка пакета ответа на рукопожатие."
+
+msgid "Cookie reply packet junk header size."
+msgstr "Размер мусорного заголовка пакета ответа cookie."
+
+msgid "Transport packet junk header size."
+msgstr "Размер мусорного заголовка транспортного пакета."
+
+msgid "Handshake initiation packet type header."
+msgstr "Тип заголовка пакета инициации рукопожатия."
+
+msgid "Handshake response packet type header."
+msgstr "Тип заголовка пакета ответа на рукопожатие."
+
+msgid "Handshake cookie packet type header."
+msgstr "Тип заголовка пакета под нагрузкой."
+
+msgid "Transport packet type header."
+msgstr "Тип заголовка транспортного пакета."
+
+msgid "First special junk packet signature."
+msgstr "Сигнатура первого special junk пакета."
+
+msgid "Second special junk packet signature."
+msgstr "Сигнатура второго special junk пакета."
+
+msgid "Third special junk packet signature."
+msgstr "Сигнатура третьего special junk пакета."
+
+msgid "Fourth special junk packet signature."
+msgstr "Сигнатура четвертого special junk пакета."
+
+msgid "Fifth special junk packet signature."
+msgstr "Сигнатура пятого special junk пакета."
+
+msgid "Expected a number or an ascending range (for example 15-30)"
+msgstr "Ожидается число или возрастающий диапазон (например, 15-30)"
+
+msgid "Range values must be between 0 and %d"
+msgstr "Значения диапазона должны находиться между 0 и %d"
+
+msgid "Header Protection Key"
+msgstr "Ключ защиты заголовка"
+
+msgid "AWG 3.x. Base64 key used to protect packet headers. The same key is required on both sides; S1-S4 must each be at least 12."
+msgstr "AWG 3.x. Ключ Base64 для защиты заголовков пакетов. На обеих сторонах требуется одинаковый ключ; каждый из параметров S1-S4 должен быть не меньше 12."
+
+msgid "Header protection requires S1, S2, S3 and S4 to be at least 12"
+msgstr "Для защиты заголовка параметры S1, S2, S3 и S4 должны быть не меньше 12"
+
+msgid "Generate Header Protection Key"
+msgstr "Сгенерировать ключ защиты заголовка"
+
+msgid "Generate key"
+msgstr "Сгенерировать ключ"
+
+msgid "Content Padding Addition"
+msgstr "Дополнительное заполнение данных"
+
+msgid "AWG 3.x. Optional random byte padding range added to transport packets."
+msgstr "AWG 3.x. Необязательный диапазон случайного заполнения в байтах, добавляемого к транспортным пакетам."
+
+msgid "Rekey After Time"
+msgstr "Время до обновления ключа"
+
+msgid "AWG 3.x. Seconds before initiating a new handshake; accepts a number or range."
+msgstr "AWG 3.x. Число секунд до начала нового рукопожатия; принимается число или диапазон."
+
+msgid "Rekey Timeout"
+msgstr "Тайм-аут обновления ключа"
+
+msgid "AWG 3.x. Seconds before retrying a handshake; accepts a number or range."
+msgstr "AWG 3.x. Число секунд до повторного рукопожатия; принимается число или диапазон."
+
+msgid "Reject After Time"
+msgstr "Время до отклонения трафика"
+
+msgid "AWG 3.x. Seconds before expiring keys and rejecting traffic; accepts a number or range."
+msgstr "AWG 3.x. Число секунд до истечения ключей и отклонения трафика; принимается число или диапазон."
+
+msgid "Keepalive Timeout"
+msgstr "Тайм-аут Keepalive"
+
+msgid "AWG 3.x. Idle seconds before sending a keepalive; accepts a number or range."
+msgstr "AWG 3.x. Число секунд простоя до отправки keepalive; принимается число или диапазон."
+
+msgid "Maximum Handshake Attempts"
+msgstr "Максимум попыток рукопожатия"
+
+msgid "AWG 3.x. Maximum handshake retries; accepts a number or range."
+msgstr "AWG 3.x. Максимальное число повторов рукопожатия; принимается число или диапазон."
+
+msgid "HeaderProtectionKey setting is invalid"
+msgstr "Параметр HeaderProtectionKey недействителен"
+
+msgid "H1-H4 settings must be valid 32-bit numbers or ranges"
+msgstr "Параметры H1-H4 должны быть допустимыми 32-битными числами или диапазонами"
+
+msgid "AWG 3.x timing and padding settings must be valid 16-bit numbers or ranges"
+msgstr "Параметры таймеров и заполнения AWG 3.x должны быть допустимыми 16-битными числами или диапазонами"
+
+msgid "Optional. Seconds between keep alive messages. AWG 3.x accepts a range such as 20-30. Default is 0 (disabled)."
+msgstr "Необязательно. Интервал между keepalive-сообщениями в секундах. AWG 3.x принимает диапазон, например 20-30. Значение по умолчанию — 0 (отключено)."
+
+msgid "Expected \"on\", \"off\", or a non-negative integer"
+msgstr "Ожидается \"on\", \"off\" или неотрицательное целое число"
+
+msgid "Random Trailers"
+msgstr "Случайные хвосты пакетов"
+
+msgid "AWG 3.1. Append a random trailer to packets to vary their sizes. This setting must be identical on both sides."
+msgstr "AWG 3.1. Добавляет к пакетам случайный хвост, чтобы изменять их размер. Значение должно совпадать на обеих сторонах."
+
+msgid "Disable Cookies"
+msgstr "Отключить Cookie Reply"
+
+msgid "AWG 3.1. Disable WireGuard cookie replies. This reduces an active-probing fingerprint but may prevent new handshakes while the interface is under load."
+msgstr "AWG 3.1. Отключает ответы WireGuard Cookie Reply. Это уменьшает сигнатуру при активном зондировании, но может помешать новым рукопожатиям при высокой нагрузке на интерфейс."
+
+msgid "AWG 3.1 boolean settings must be \"on\", \"off\", or non-negative integers"
+msgstr "Логические параметры AWG 3.1 должны быть \"on\", \"off\" или неотрицательными целыми числами"
+
+msgid "Enable / Disable peer. Restart amneziawg interface to apply changes."
+msgstr ""
+"Включить/выключить узел. Перезапустите интерфейс AmneziaWG, чтобы применить "
+"изменения."
+
+msgid "AmneziaWG peer is disabled"
+msgstr "Узел AmneziaWG отключён"
+
+msgctxt "Label indicating that AmneziaWG peer is disabled"
+msgid "Disabled"
+msgstr "Отключено"
+
+msgctxt "Label indicating that AmneziaWG peer lacks public key"
+msgid "Key missing"
+msgstr "Отсутствует ключ"
+
+msgctxt "Tooltip displaying full AmneziaWG peer public key"
+msgid "Public key: %h"
+msgstr "Публичный ключ: %h"
+
+msgctxt "Label indicating that AmneziaWG peer private key is stored"
+msgid "Private"
+msgstr "Private"
+
+msgctxt "Label indicating that AmneziaWG peer uses a PSK"
+msgid "PSK"
+msgstr "PSK"
+
+msgid "Required. Public key of the AmneziaWG peer."
+msgstr "Обязательно. Публичный ключ AmneziaWG узла."
+
+msgid ""
+"Optional. Private key of the AmneziaWG peer. The key is not required for "
+"establishing a connection but allows generating a peer configuration or QR "
+"code if available. It can be removed after the configuration has been "
+"exported."
+msgstr ""
+"Необязательно. Закрытый ключ узла AmneziaWG. Ключ не требуется для "
+"установления соединения, но позволяет сгенерировать конфигурацию узла или QR-"
+"код, если он доступен. Он может быть удален после экспорта конфигурации."
+
+msgid "Generates a configuration suitable for import on a AmneziaWG peer"
+msgstr "Создает конфигурацию, подходящую для импорта на узле AmneziaWG"
+
+msgid ""
+"No fixed interface listening port defined, peers might not be able to "
+"initiate connections to this AmneziaWG instance!"
+msgstr ""
+"Не определен фиксированный порт прослушивания интерфейса, поэтому узлы могут "
+"оказаться не в состоянии инициировать соединения с этим экземпляром "
+"AmneziaWG!"
+
+msgid "Junk packets"
+msgstr "Мусорные пакеты"
+
+msgid "Packet count and size values used to disguise AmneziaWG traffic. Importing a known-good configuration is recommended."
+msgstr "Количество и размеры пакетов, используемые для маскировки трафика AmneziaWG. Рекомендуется импортировать заведомо рабочую конфигурацию."
+
+msgid "Packet padding"
+msgstr "Заполнение пакетов"
+
+msgid "Junk header sizes for handshake, cookie reply and transport packets."
+msgstr "Размеры мусорных заголовков для пакетов рукопожатия, ответа cookie и транспортных пакетов."
+
+msgid "Packet type headers"
+msgstr "Заголовки типов пакетов"
+
+msgid "Packet type values must match the configuration on the remote peer."
+msgstr "Значения типов пакетов должны совпадать с конфигурацией удалённого узла."
+
+msgid "Special packet signatures"
+msgstr "Сигнатуры специальных пакетов"
+
+msgid "Optional signatures for special junk packets."
+msgstr "Необязательные сигнатуры специальных мусорных пакетов."
+
+msgid "Header protection"
+msgstr "Защита заголовков"
+
+msgid "AWG 3.x header protection settings. The key and S1-S4 values must match on both sides."
+msgstr "Настройки защиты заголовков AWG 3.x. Ключ и значения S1-S4 должны совпадать на обеих сторонах."
+
+msgid "Handshake timing"
+msgstr "Таймеры рукопожатия"
+
+msgid "Advanced AWG 3.x timing values. Leave them at their defaults unless the peer configuration specifies them."
+msgstr "Расширенные таймеры AWG 3.x. Оставьте значения по умолчанию, если в конфигурации узла не указаны другие."
+
+msgid "AWG 3.1 options"
+msgstr "Параметры AWG 3.1"
+
+msgid "Optional traffic-shaping and active-probing resistance settings. Values must match on both sides where noted."
+msgstr "Необязательные параметры изменения трафика и защиты от активного зондирования. Там, где это указано, значения должны совпадать на обеих сторонах."
+
+msgid "Selected file: %s"
+msgstr "Выбран файл: %s"
+
+msgid "Choose .conf file…"
+msgstr "Выбрать файл .conf…"
+
+msgid "No file selected"
+msgstr "Файл не выбран"
+
+msgid "This configuration and QR code contain a private key. Keep them secret."
+msgstr "Эта конфигурация и QR-код содержат закрытый ключ. Не передавайте их посторонним."
+
+msgid "Copy configuration"
+msgstr "Копировать конфигурацию"
+
+msgid "Unable to copy the configuration."
+msgstr "Не удалось скопировать конфигурацию."
+
+msgid "Download .conf"
+msgstr "Скачать .conf"
+
+msgid "Copied"
+msgstr "Скопировано"
