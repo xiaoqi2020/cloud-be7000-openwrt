@@ -1,72 +1,60 @@
-name: Auto Sync Upstream Tags & Release
+name: Auto Sync Tag from Upstream
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
-  sync-tags-release:
+  sync:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Add upstream remote
         run: |
-          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git 2>/dev/null || true
-          git remote -v
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git
+          git fetch upstream --tags --force
 
-      - name: Fetch upstream tags
+      - name: Sync source code from upstream
         run: |
-          # 强制拉取上游所有标签
-          git fetch upstream --tags --prune --force
+          git checkout main
+          git reset --hard upstream/main
+          git push origin main --force
 
-      - name: Sync latest tag & Create Release
+      - name: Get latest upstream tag
+        id: latest_tag
         run: |
-          # 获取上游最新标签（按创建时间排序）
-          LATEST_TAG=$(git tag -l --sort=creatordate | tail -n 1)
+          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n1)
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "检测到最新标签: $LATEST_TAG"
 
-          if [ -z "$LATEST_TAG" ]; then
-            echo "上游没有发现任何标签，跳过。"
-            exit 0
-          fi
-
-          echo "上游最新标签：$LATEST_TAG"
-
-          # 检查本地是否已有该标签
-          if git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
-            echo "标签 $LATEST_TAG 已存在。"
+      - name: Check if tag exists locally
+        id: check_tag
+        run: |
+          TAG="${{ steps.latest_tag.outputs.tag }}"
+          if git tag -l "$TAG" | grep -q "$TAG"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "标签 $TAG 已存在，跳过创建"
           else
-            # 推送新标签到当前仓库
-            git push origin "$LATEST_TAG"
-            echo "✅ 已推送标签：$LATEST_TAG"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "标签 $TAG 不存在，准备创建"
           fi
 
-          # 检查是否已存在同名 Release
-          RELEASE_EXISTS=$(gh release view "$LATEST_TAG" --json tagName --jq '.tagName' 2>/dev/null || echo "")
-
-          if [ "$RELEASE_EXISTS" == "$LATEST_TAG" ]; then
-            echo "Release $LATEST_TAG 已存在，跳过创建。"
-            exit 0
-          fi
-
-          # 创建新 Release
-          echo "正在创建 Release: $LATEST_TAG ..."
-          gh release create "$LATEST_TAG" \
-            --title "Release $LATEST_TAG" \
-            --notes "Auto-synced from upstream: timofey-maykov/be7000-openwrt" \
-            --target main \
-            --verify-tag
-
-          echo "✅ 已创建 Release: $LATEST_TAG"
+      - name: Create tag and release
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.latest_tag.outputs.tag }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes "自动同步上游 $TAG 版本" \
+            --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
