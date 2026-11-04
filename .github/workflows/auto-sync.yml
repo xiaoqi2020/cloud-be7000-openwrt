@@ -2,71 +2,60 @@ name: Upstream Sync & Tag Fetch
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # 每2小时自动检测并同步一次
-  workflow_dispatch: # 支持随时在 GitHub 页面手动点击按钮立即同步
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 赋予写入权限以推送同步的代码和标
+      contents: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 必须拉取完整历史以获取所有分支和标签
+          ref: main
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git Identity
         run: |
           git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.io'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Sync Code and Tags from Upstream
         run: |
-          # 1. 绑定上游官方仓库地址
-          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git
+          set -e
+
+          # 备份本地工作流（唯一需要保留的文件）
+          cp -r .github/workflows /tmp/local-workflows
+
+          # 绑定上游
+          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
           git fetch upstream --tags
 
-          # 2. 【核心保护】在合并前强制恢复本地的工作流目录，防止被上游覆盖
-          git checkout HEAD -- .github/workflows/ || true
-
-          # 3. 合并上游 main 分支的更新
           git checkout main
+
+          # 合并上游，冲突时明确失败
           git merge upstream/main --allow-unrelated-histories --no-edit || {
-            echo "合并遇到冲突，请检查是否有冲突文件..."
+            echo "::error::合并冲突，冲突文件："
+            git diff --name-only --diff-filter=U
             git merge --abort
             exit 1
           }
 
-          # 4. 推送合并后的最新代码到你的仓库
+          # 合并后强制还原自己的 auto-sync.yml，其他文件保持上游版本
+          rm -rf .github/workflows
+          cp -r /tmp/local-workflows .github/workflows
+          git add .github/workflows
+          git commit -m "chore: preserve local auto-sync workflow" || echo "no changes"
+
           git push origin main
 
-          # 5. 完整同步上游的所有 Tags（标签）
-          for tag in $(git tag -l); do
-            git push origin "refs/tags/$tag" --no-verify || true
-          done
-
-      - name: Extract and Process Latest Tag Release Notes (Chinese Only)
-        run: |
-          # 获取最新创建的 Tag
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          echo "最新标签: $LATEST_TAG"
-
-          # 获取该 Tag 的说明或提交日志
-          RAW_NOTES=$(git tag -l --format='%(contents)' "$LATEST_TAG")
-          if [ -z "$RAW_NOTES" ]; then
-            RAW_NOTES=$(git log -1 --pretty=%B "$LATEST_TAG")
-          fi
-
-          # 仅提取包含中文字符的行（利用汉字 Unicode 范围正则匹配）
-          CHINESE_NOTES=$(echo "$RAW_NOTES" | grep -E '[\x{4e00}-\x{9fa5}]' || echo "该版本暂无中文说明。")
-
-          # 生成中文说明 Markdown 文件并提交
-          echo "### $LATEST_TAG 中文更新说明" > latest_release_cn.md
-          echo "$CHINESE_NOTES" >> latest_release_cn.md
-
-          git add latest_release_cn.md
-          git commit -m "docs: update release notes (Chinese) for $LATEST_TAG" || echo "无变更需要提交"
-          git push origin main
+          # ✅ 关键修正：一次性推送所有标签，失败会报错而不是静默忽略
+          git push origin --tags
