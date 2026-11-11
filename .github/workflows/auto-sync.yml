@@ -12,6 +12,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # 使用 PAT 后，permissions 其实不再起决定性作用，但保留着无妨
     permissions:
       contents: write
 
@@ -21,7 +22,8 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # ✅ 关键修改：使用你刚刚创建的 PAT_TOKEN 替代默认的 GITHUB_TOKEN
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Configure Git Identity
         run: |
@@ -59,5 +61,5 @@ jobs:
 
           git push origin main
 
-          # 强制推送标签
+          # 强制推送标签 (现在用的是高级通行证，不会再报权限错误了)
           git push origin --tags --force
