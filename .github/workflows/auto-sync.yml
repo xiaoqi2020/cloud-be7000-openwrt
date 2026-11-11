@@ -1,33 +1,3 @@
-name: Upstream Sync & Tag Fetch
-
-on:
-  schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
-
-concurrency:
-  group: upstream-sync
-  cancel-in-progress: false
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git Identity
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-
       - name: Sync Code and Tags from Upstream
         run: |
           set -e
@@ -37,7 +7,9 @@ jobs:
 
           # 绑定上游
           git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
-          git fetch upstream --tags
+          
+          # ✅ 修改点 1：拉取上游标签时强制覆盖本地同名标签
+          git fetch upstream --tags --force
 
           git checkout main
 
@@ -57,5 +29,5 @@ jobs:
 
           git push origin main
 
-          # ✅ 关键修正：一次性推送所有标签，失败会报错而不是静默忽略
-          git push origin --tags
+          # ✅ 修改点 2：强制推送所有标签，覆盖远程旧的同名标签（只保留这一行）
+          git push origin --tags --force
