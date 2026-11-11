@@ -2,8 +2,8 @@ name: Upstream Sync & Tag Fetch
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
+    - cron: '0 */2 * * *' # 每2小时自动同步一次
+  workflow_dispatch:      # 允许手动点击运行
 
 concurrency:
   group: upstream-sync
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write # ✅ 必须有这个权限，才能呼叫你的编译脚本
+      actions: write # ✅ 必须有这个权限，才能触发 build.yml
 
     steps:
       - name: Checkout Repository
@@ -31,17 +31,17 @@ jobs:
 
       - name: Sync Code and Tags from Upstream
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }} # 用于触发下一个工作流
         run: |
           set -e
 
-          # 1. 备份本地工作流 (保护你自己的所有脚本)
+          # 1. 备份本地工作流文件夹（保护你自己的脚本）
           cp -r .github/workflows /tmp/local-workflows
 
           # 2. 记录同步前的本地 Tags
           git tag | grep '^v' | sort > /tmp/old_tags.txt
 
-          # 3. 绑定上游并拉取代码和 Tags
+          # 3. 绑定上游并拉取代码和 Tags (强制覆盖本地同名标签)
           git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
           git fetch upstream --tags --force
           git checkout main
@@ -54,7 +54,7 @@ jobs:
             exit 1
           }
 
-          # 5. 还原你自己的 workflow 文件
+          # 5. 还原自己的 workflow 文件
           rm -rf .github/workflows
           cp -r /tmp/local-workflows .github/workflows
           git add .github/workflows
@@ -64,7 +64,7 @@ jobs:
           git push origin main
           git push origin --tags --force
 
-          # 7. 找出新增的 Tags
+          # 7. 对比找出新增的 Tags
           git tag | grep '^v' | sort > /tmp/new_tags.txt
           NEW_TAGS=$(comm -13 /tmp/old_tags.txt /tmp/new_tags.txt || true)
 
@@ -73,9 +73,8 @@ jobs:
             exit 0
           fi
 
-          # 8. 发现新标签，直接呼叫你的编译工作流
+          # 8. 发现新标签，通知 build.yml 开始工作
           for TAG in $NEW_TAGS; do
             echo "🎉 发现新标签: $TAG，正在触发编译工作流..."
-            # 这里假设你的编译脚本叫 build.yml，并且支持接收 tag 参数
             gh workflow run build.yml -f tag="$TAG"
           done
