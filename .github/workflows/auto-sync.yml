@@ -12,9 +12,9 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # 使用 PAT 后，permissions 其实不再起决定性作用，但保留着无妨
     permissions:
       contents: write
+      actions: write # ✅ 必须有这个权限，才能触发 build.yml
 
     steps:
       - name: Checkout Repository
@@ -22,7 +22,6 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          # ✅ 关键修改：使用你刚刚创建的 PAT_TOKEN 替代默认的 GITHUB_TOKEN
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Configure Git Identity
@@ -31,21 +30,24 @@ jobs:
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Sync Code and Tags from Upstream
+        id: sync
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }} # 用于 gh 命令
         run: |
           set -e
 
-          # 备份本地工作流
+          # 1. 备份本地工作流
           cp -r .github/workflows /tmp/local-workflows
 
-          # 绑定上游
-          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
-          
-          # 拉取上游标签时强制覆盖本地同名标签
-          git fetch upstream --tags --force
+          # 2. 记录同步前的本地 Tags (只记录以 v 开头的)
+          git tag | grep '^v' | sort > /tmp/old_tags.txt
 
+          # 3. 绑定上游并拉取代码和 Tags (强制覆盖)
+          git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
+          git fetch upstream --tags --force
           git checkout main
 
-          # 合并上游
+          # 4. 合并上游代码
           git merge upstream/main --allow-unrelated-histories --no-edit || {
             echo "::error::Merge conflict"
             git diff --name-only --diff-filter=U
@@ -53,13 +55,49 @@ jobs:
             exit 1
           }
 
-          # 还原自己的工作流文件
+          # 5. 还原自己的 workflow 文件
           rm -rf .github/workflows
           cp -r /tmp/local-workflows .github/workflows
           git add .github/workflows
           git commit -m "chore: preserve local auto-sync workflow" || echo "no changes"
 
+          # 6. 推送代码和 Tags (因为使用了 PAT_TOKEN，这里的 push 权限完全没问题)
           git push origin main
-
-          # 强制推送标签 (现在用的是高级通行证，不会再报权限错误了)
           git push origin --tags --force
+
+          # 7. 找出新增的 Tags
+          git tag | grep '^v' | sort > /tmp/new_tags.txt
+          NEW_TAGS=$(comm -13 /tmp/old_tags.txt /tmp/new_tags.txt || true)
+
+          if [ -z "$NEW_TAGS" ]; then
+            echo "没有发现新标签，跳过触发编译。"
+            exit 0
+          fi
+
+          echo "🎉 发现新标签: $NEW_TAGS"
+
+          # 8. 遍历新标签，提取中文说明并触发编译
+          for TAG in $NEW_TAGS; do
+            echo "正在处理标签: $TAG"
+            
+            # 获取上游 Release 描述
+            BODY=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
+              "https://api.github.com/repos/timofey-maykov/be7000-openwrt/releases/tags/${TAG}" | jq -r '.body // ""')
+            
+            # 提取中文内容 (截取 "更新内容" 及其后面的所有文本)
+            CHINESE_NOTES=$(echo "$BODY" | sed -n '/更新内容/,$p')
+            
+            # 如果没找到 "更新内容" 标记，兜底处理
+            if [ -z "$CHINESE_NOTES" ]; then
+              CHINESE_NOTES="同步上游 $TAG 版本。"
+            fi
+            
+            # 触发 build.yml 并传递参数
+            # 注意：由于多行文本在命令行传递可能丢失格式，这里替换成 %0A 转义 (GitHub 的传参机制)
+            ESCAPED_NOTES=$(echo "$CHINESE_NOTES" | awk '{printf "%s%%0A", $0}')
+            
+            echo "触发编译工作流..."
+            gh workflow run build.yml \
+              -f tag="$TAG" \
+              -f release_body="$ESCAPED_NOTES"
+          done
