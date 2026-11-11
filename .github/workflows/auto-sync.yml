@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write # ✅ 必须有这个权限，才能触发 build.yml
+      actions: write # ✅ 必须有这个权限，才能呼叫你的编译脚本
 
     steps:
       - name: Checkout Repository
@@ -30,19 +30,18 @@ jobs:
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Sync Code and Tags from Upstream
-        id: sync
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }} # 用于 gh 命令
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           set -e
 
-          # 1. 备份本地工作流
+          # 1. 备份本地工作流 (保护你自己的所有脚本)
           cp -r .github/workflows /tmp/local-workflows
 
-          # 2. 记录同步前的本地 Tags (只记录以 v 开头的)
+          # 2. 记录同步前的本地 Tags
           git tag | grep '^v' | sort > /tmp/old_tags.txt
 
-          # 3. 绑定上游并拉取代码和 Tags (强制覆盖)
+          # 3. 绑定上游并拉取代码和 Tags
           git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
           git fetch upstream --tags --force
           git checkout main
@@ -55,13 +54,13 @@ jobs:
             exit 1
           }
 
-          # 5. 还原自己的 workflow 文件
+          # 5. 还原你自己的 workflow 文件
           rm -rf .github/workflows
           cp -r /tmp/local-workflows .github/workflows
           git add .github/workflows
           git commit -m "chore: preserve local auto-sync workflow" || echo "no changes"
 
-          # 6. 推送代码和 Tags (因为使用了 PAT_TOKEN，这里的 push 权限完全没问题)
+          # 6. 推送代码和 Tags
           git push origin main
           git push origin --tags --force
 
@@ -70,34 +69,13 @@ jobs:
           NEW_TAGS=$(comm -13 /tmp/old_tags.txt /tmp/new_tags.txt || true)
 
           if [ -z "$NEW_TAGS" ]; then
-            echo "没有发现新标签，跳过触发编译。"
+            echo "✅ 没有发现新标签，同步完成。"
             exit 0
           fi
 
-          echo "🎉 发现新标签: $NEW_TAGS"
-
-          # 8. 遍历新标签，提取中文说明并触发编译
+          # 8. 发现新标签，直接呼叫你的编译工作流
           for TAG in $NEW_TAGS; do
-            echo "正在处理标签: $TAG"
-            
-            # 获取上游 Release 描述
-            BODY=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
-              "https://api.github.com/repos/timofey-maykov/be7000-openwrt/releases/tags/${TAG}" | jq -r '.body // ""')
-            
-            # 提取中文内容 (截取 "更新内容" 及其后面的所有文本)
-            CHINESE_NOTES=$(echo "$BODY" | sed -n '/更新内容/,$p')
-            
-            # 如果没找到 "更新内容" 标记，兜底处理
-            if [ -z "$CHINESE_NOTES" ]; then
-              CHINESE_NOTES="同步上游 $TAG 版本。"
-            fi
-            
-            # 触发 build.yml 并传递参数
-            # 注意：由于多行文本在命令行传递可能丢失格式，这里替换成 %0A 转义 (GitHub 的传参机制)
-            ESCAPED_NOTES=$(echo "$CHINESE_NOTES" | awk '{printf "%s%%0A", $0}')
-            
-            echo "触发编译工作流..."
-            gh workflow run build.yml \
-              -f tag="$TAG" \
-              -f release_body="$ESCAPED_NOTES"
+            echo "🎉 发现新标签: $TAG，正在触发编译工作流..."
+            # 这里假设你的编译脚本叫 build.yml，并且支持接收 tag 参数
+            gh workflow run build.yml -f tag="$TAG"
           done
