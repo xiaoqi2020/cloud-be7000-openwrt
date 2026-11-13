@@ -21,7 +21,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }} # 必须用 PAT_TOKEN
+          token: ${{ secrets.PAT_TOKEN }} # 必须用 PAT_TOKEN，否则不会触发下游 build
 
       - name: Configure Git Identity
         run: |
@@ -32,27 +32,35 @@ jobs:
         run: |
           set -e
 
+          # 0. 备份你自己的自动同步脚本，防止被上游覆盖
+          cp .github/workflows/auto-sync.yml /tmp/my-auto-sync.yml || true
+
           # 1. 记录同步前的本地 Tags
-          git tag | grep '^v' | sort > /tmp/old_tags.txt
+          git tag | grep '^v' | sort > /tmp/old_tags.txt || true
 
           # 2. 绑定上游并拉取代码和 Tags
           git remote add upstream https://github.com/timofey-maykov/be7000-openwrt.git || true
           git fetch upstream --tags --force
-          git checkout main
 
-          # 3. 合并上游代码
-          git merge upstream/main --allow-unrelated-histories --no-edit || {
-            echo "::error::Merge conflict"
+          # 3. 变基上游代码（保持线性历史）
+          git rebase upstream/main || {
+            echo "::error::Rebase 冲突，请人工介入"
             git diff --name-only --diff-filter=U
-            git merge --abort
+            git rebase --abort  # 🟢 修复：rebase 必须用 rebase --abort
             exit 1
           }
 
-          # 4. 找出新增的 Tags
-          git tag | grep '^v' | sort > /tmp/new_tags.txt
+          # 4. 恢复你自己的脚本并提交（如果没有变化则跳过）
+          mkdir -p .github/workflows
+          cp /tmp/my-auto-sync.yml .github/workflows/auto-sync.yml
+          git add .github/workflows/auto-sync.yml
+          git commit -m "chore: preserve local auto-sync workflow" || echo "no workflow changes"
+
+          # 5. 找出新增的 Tags
+          git tag | grep '^v' | sort > /tmp/new_tags.txt || true
           NEW_TAGS=$(comm -13 /tmp/old_tags.txt /tmp/new_tags.txt || true)
 
-          # 5. 如果有新标签，提取中文并写入文件
+          # 6. 如果有新标签，提取中文并写入文件
           if [ -n "$NEW_TAGS" ]; then
             echo "🎉 发现新标签: $NEW_TAGS"
             mkdir -p docs/release-notes
@@ -79,9 +87,8 @@ jobs:
             git commit -m "chore: add Chinese release notes for $NEW_TAGS" || echo "no notes to commit"
           fi
 
-          # 6. 推送代码 (包含中文说明文件)
+          # 7. 推送代码 (包含中文说明文件)
           git push origin main
 
-          # 7. 强制推送标签 (这会自动触发 build.yml)
-          # 因为使用的是 PAT_TOKEN 推送，GitHub 会允许级联触发
+          # 8. 强制推送标签 (使用 PAT_TOKEN 会自动触发 build.yml)
           git push origin --tags --force
